@@ -95,7 +95,8 @@ PostgreSQL is the **source of truth** for game state. The database stores facts 
 ```text
 db/
 ├── migrations/
-│   └── 001_initial_schema.sql   # authoritative, versioned schema changes
+│   ├── 001_initial_schema.sql   # authoritative, versioned schema changes
+│   └── 002_game_integrity_indexes.sql  # indexes for the Game APIs (no data changes)
 ├── seeds/
 │   └── 001_demo_data.sql        # development demo data (kept separate from the schema)
 └── schema.sql                   # reference snapshot of the full current schema
@@ -193,12 +194,19 @@ Everything below runs from the project folder, with the Docker containers up (`d
 docker exec campusquest-postgres psql -U campus -d campusquest -v ON_ERROR_STOP=1 -f /db/migrations/001_initial_schema.sql
 ```
 
-The migration is safe on an empty database and harmless to re-run. It runs in one transaction and never drops or rewrites data. If it finds the old Day 1/Day 2 prototype tables it stops and changes nothing (see the upgrade note in section 4).
+A **fresh** volume runs every file in `db/migrations/` automatically (001, then 002). For a database that already has 001, apply the new one by hand. It only adds indexes, never changes data, and is harmless to re-run:
 
-Without Docker, use your local `psql`:
+```bash
+docker exec campusquest-postgres psql -U campus -d campusquest -v ON_ERROR_STOP=1 -f /db/migrations/002_game_integrity_indexes.sql
+```
+
+Migration 001 is safe on an empty database and harmless to re-run. It runs in one transaction and never drops or rewrites data. If it finds the old Day 1/Day 2 prototype tables it stops and changes nothing (see the upgrade note in section 4).
+
+Without Docker, use your local `psql` (run 001, then 002):
 
 ```bash
 psql -h localhost -U campus -d campusquest -v ON_ERROR_STOP=1 -f db/migrations/001_initial_schema.sql
+psql -h localhost -U campus -d campusquest -v ON_ERROR_STOP=1 -f db/migrations/002_game_integrity_indexes.sql
 ```
 
 ### Seed data
@@ -247,7 +255,7 @@ Invalid, expired, or missing tokens get `401 {"error": "Unauthorized"}`.
 
 ## 8. API documentation
 
-Errors always look like `{ "error": "message" }`.
+Errors always look like `{ "error": "message" }`. The game endpoints are documented in [section 10](#10-game-api).
 
 ### `GET /health`
 
@@ -338,3 +346,186 @@ Without a valid token you get `401 {"error":"Unauthorized"}`:
 ```bash
 curl -i http://localhost:3000/me
 ```
+
+## 10. Game API
+
+All game endpoints need `Authorization: Bearer <Firebase ID token>` and a player row, so the frontend must call `GET /me` once after login (it creates the player). A missing player returns `404 User not found. Call GET /me first`.
+
+### Start a game
+
+There is no admin API yet. The demo game is seeded as `scheduled`; players can join teams while it is `scheduled` or `active`, but every other action needs `active`:
+
+```bash
+docker exec campusquest-postgres psql -U campus -d campusquest -c "UPDATE game_sessions SET status = 'active' WHERE name = 'CampusQuest Demo';"
+```
+
+Use `paused` / `finished` the same way to stop play.
+
+### The flow
+
+```text
+join team -> GET riddle -> POST answer (correct = +1 resonator) -> walk to the territory
+-> POST deploy (1/3, 2/3, 3/3) -> three owners POST lock -> enemy POSTs attack (3/3 -> ... -> 0/3 neutral)
+```
+
+### Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/game` | Current game (latest `scheduled`/`active`) with its teams and member counts |
+| POST | `/teams/:id/join` | Join a team (once; no switching) |
+| GET | `/territories` | All territories of your game with derived state |
+| GET | `/territories/:id` | One territory, plus your resonator and the active lock |
+| GET | `/territories/:id/riddle` | Easiest riddle you have not solved here (question only) |
+| POST | `/riddles/:id/answer` | Submit an answer |
+| GET | `/me/resonators` | Your inventory and your active resonators |
+| POST | `/territories/:id/deploy` | Deploy one resonator |
+| POST | `/territories/:id/attack` | Destroy one enemy resonator |
+| POST | `/territories/:id/lock` | Confirm the three-player lock |
+
+`latitude` / `longitude` in request bodies are the player's current GPS position (degrees).
+
+**`GET /game`** `200`
+
+```json
+{
+  "id": 1, "name": "CampusQuest Demo", "status": "active", "starts_at": null, "ends_at": null,
+  "teams": [
+    { "id": 1, "name": "Red", "color": "#EF4444", "score": 0, "members": 2 },
+    { "id": 2, "name": "Blue", "color": "#2563EB", "score": 0, "members": 1 }
+  ],
+  "my_team_id": 1
+}
+```
+
+**`POST /teams/1/join`** `200`
+
+```json
+{ "user_id": 3, "team": { "id": 1, "name": "Red", "color": "#EF4444", "game_id": 1 } }
+```
+
+**`GET /territories`** `200` (one aggregated query; answers are never included)
+
+```json
+[
+  {
+    "id": 1, "name": "Central Library", "description": "The main library building.",
+    "latitude": 10, "longitude": 20, "radius": 30,
+    "status": "partial", "locked": false,
+    "owner_team": { "id": 1, "name": "Red", "color": "#EF4444" },
+    "resonators": { "total_active": 2, "by_team": { "1": 2 } }
+  }
+]
+```
+
+`GET /territories/:id` returns the same fields plus `my_resonator` (`{ id, deployed_at }` or `null`) and `active_lock` (`{ id, team_id, locked_by_user_id, players: [..3 ids], locked_at }` or `null`).
+
+**`GET /territories/1/riddle`** `200` / `404 No unsolved riddles at this territory`
+
+```json
+{ "id": 1, "territory_id": 1, "question": "I have a spine but no bones...", "difficulty": "easy" }
+```
+
+**`POST /riddles/1/answer`** body `{ "answer": "book" }`
+
+```json
+{ "correct": true, "resonator_granted": true, "available_resonators": 1 }
+```
+
+A wrong answer returns `200 { "correct": false, "resonator_granted": false, "wrong_attempts_left_this_minute": 4 }`.
+
+**`GET /me/resonators`** `200`
+
+```json
+{
+  "available": 1, "solved_riddles": 2, "deployed_total": 1,
+  "active": [ { "id": 7, "territory_id": 1, "territory_name": "Central Library", "status": "active", "deployed_at": "2026-10-01T10:00:00.000Z" } ]
+}
+```
+
+**`POST /territories/1/deploy`** body `{ "latitude": 10.0001, "longitude": 20.0001 }` returns `201`
+
+```json
+{
+  "resonator": { "id": 7, "territory_id": 1, "user_id": 3, "team_id": 1, "status": "active", "deployed_at": "..." },
+  "territory": { "id": 1, "status": "partial", "owner_team_id": 1, "locked": false, "active_resonators": 1 },
+  "available_resonators": 0
+}
+```
+
+**`POST /territories/1/attack`** body `{ "latitude": 10.0001, "longitude": 20.0001, "target_resonator_id": 7 }` (`target_resonator_id` is optional; default is the oldest active resonator) returns `200`
+
+```json
+{
+  "attack": { "id": 1, "status": "successful", "created_at": "...", "resolved_at": "..." },
+  "destroyed_resonator": { "id": 7, "user_id": 3, "team_id": 1 },
+  "territory": { "id": 1, "status": "partial", "owner_team_id": 1, "locked": false, "active_resonators": 2 },
+  "cooldown_seconds": 60
+}
+```
+
+**`POST /territories/1/lock`** body `{ "latitude": ..., "longitude": ... }`. The first and second confirmations return:
+
+```json
+{ "locked": false, "confirmed": 2, "needed": 3, "expires_in_seconds": 60 }
+```
+
+The third confirmation creates the lock:
+
+```json
+{
+  "locked": true,
+  "lock": { "id": 1, "territory_id": 1, "team_id": 1, "locked_by_user_id": 9, "players": [3, 5, 9], "locked_at": "..." }
+}
+```
+
+### Status codes
+
+| Code | Meaning | Examples |
+|---|---|---|
+| 400 | Invalid input | missing or out-of-range `latitude`, empty `answer` |
+| 401 | Missing or invalid token | |
+| 403 | Not allowed | no team, too far away, attacking your own team, locking a territory you do not hold |
+| 404 | Not found | unknown territory, riddle, team or target resonator |
+| 409 | State conflict | already on a team, already solved, game not active, no resonators left, territory held by another team or full |
+| 429 | Throttled | wrong-answer limit, attack cooldown (a `Retry-After` header is sent) |
+
+### Rules
+
+| Rule | Value |
+|---|---|
+| Resonators per territory | 3 (`MAX_RESONATORS_PER_TERRITORY`) |
+| Teams per territory | One team at a time |
+| One active resonator | Per player per territory (also enforced by the database) |
+| Capture state | 0 active = neutral, 1-2 = partial, 3 = controlled (stored in `territories`, recalculated in the same transaction as every resonator change) |
+| Inventory | Derived: riddles solved correctly minus resonators ever deployed. Destroyed resonators are not refunded |
+| Riddle reward | Once per riddle per player (also enforced by migration 002) |
+| Wrong answers | More than 5 per riddle per player per minute -> 429 (`MAX_WRONG_ANSWERS_PER_MINUTE`) |
+| Proximity | Deploy, attack and lock need you within the territory `radius` (Haversine). Riddle answers do not |
+| Attack | Resolves immediately; destroys one resonator (the row is kept); one attack per player per 60 s (`ATTACK_COOLDOWN_SECONDS`) |
+| Territory lost | At 0 active resonators the territory is neutral and `TERRITORY_LOST` is logged |
+| Reclaim | Reaching 3/3 on a territory that has a `TERRITORY_LOST` event logs `TERRITORY_RECLAIMED` instead of `TERRITORY_CAPTURED` |
+| Lock | Needs exactly 3 active resonators, all from your team. Each of the 3 owners must be within the radius and confirm within 60 s (`LOCK_CONFIRM_WINDOW_SECONDS`) |
+| Lock released | Any attack that drops the territory below 3 active resonators releases the lock |
+
+Tunable values live in `src/config/game.js`.
+
+**Lock limits:** the pending confirmations are kept in memory. They are lost when the API restarts and only work with a single API instance. The lock itself is stored in PostgreSQL (`territory_locks`).
+
+**Events:** every action writes to `game_events` in the same transaction: `PLAYER_JOINED`, `RIDDLE_SOLVED`, `RESONATOR_GRANTED`, `RESONATOR_DEPLOYED`, `TERRITORY_PARTIALLY_CAPTURED`, `TERRITORY_CAPTURED` / `TERRITORY_RECLAIMED`, `TERRITORY_LOCKED`, `TERRITORY_ATTACKED`, `RESONATOR_DESTROYED`, `TERRITORY_LOST`.
+
+## 11. Tests
+
+37 automated tests (`node:test`, no extra dependencies) run against **real PostgreSQL**; only Firebase token verification is mocked. They use their own database, `campusquest_test`, which is created and migrated automatically (the name must end in `_test`, so your dev data is never touched).
+
+```bash
+# Inside Docker (containers running; rebuild once to pick up the new script)
+docker compose up --build -d
+docker compose exec api npm test
+
+# Locally (PostgreSQL on localhost:5432 and DB_HOST=localhost in .env)
+npm test
+```
+
+The tests cover joining, derived territory state, riddles and throttling, deploy rules, capture events, attacks and cooldown, the three-player lock, concurrency races (`Promise.all`), and the "game not active" guard.
+

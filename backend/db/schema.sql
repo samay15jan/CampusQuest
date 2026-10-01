@@ -293,3 +293,13 @@ CREATE INDEX IF NOT EXISTS idx_game_events_territory_id     ON game_events (terr
 CREATE INDEX IF NOT EXISTS idx_game_events_user_id          ON game_events (user_id);
 CREATE INDEX IF NOT EXISTS idx_game_events_team_id          ON game_events (team_id);
 CREATE INDEX IF NOT EXISTS idx_game_events_created_at       ON game_events (created_at);
+
+-- ---------------------------------------------------------------------
+-- Added by migration 002 (Game APIs)
+-- ---------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS uq_riddle_attempts_one_correct_per_user_riddle
+  ON riddle_attempts (riddle_id, user_id) WHERE correct = true;
+CREATE INDEX IF NOT EXISTS idx_riddle_attempts_user_riddle_time
+  ON riddle_attempts (user_id, riddle_id, attempted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_attacks_attacker_user_created
+  ON attacks (attacker_user_id, created_at DESC);

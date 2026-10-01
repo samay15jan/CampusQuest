@@ -19,6 +19,9 @@ services:
       DB_PASSWORD: campus123
     volumes:
       - ./src:/app/src
+      # Needed to run `npm test` inside the container (tests use their own *_test database).
+      - ./test:/app/test
+      - ./db:/app/db:ro
     depends_on:
       postgres:
         condition: service_healthy
