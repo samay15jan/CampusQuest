@@ -2,6 +2,17 @@
 
 Node.js (JavaScript, ES Modules) + Fastify + PostgreSQL (`pg`) + Firebase Admin + Docker.
 
+## 0. Updated Endpoints
+| Method | Endpoint | Description | Auth | Parameters / Body |
+|---|---|---|---|---|
+| `GET` | `/me` | Get/create the authenticated player's profile | Firebase | None |
+| `POST` | `/me/team` | Assign the authenticated player to a team | Firebase | Body: `{ "team_id": "Red" \| "Blue" }` |
+
+
+REQUIRED: `Authorization: Bearer <Firebase ID Token>`
+
+---
+
 ## 1. Installation
 
 Requirements: Docker + Docker Compose, or Node.js 22+ and a local PostgreSQL 16 for running without Docker.
@@ -513,19 +524,3 @@ Tunable values live in `src/config/game.js`.
 **Lock limits:** the pending confirmations are kept in memory. They are lost when the API restarts and only work with a single API instance. The lock itself is stored in PostgreSQL (`territory_locks`).
 
 **Events:** every action writes to `game_events` in the same transaction: `PLAYER_JOINED`, `RIDDLE_SOLVED`, `RESONATOR_GRANTED`, `RESONATOR_DEPLOYED`, `TERRITORY_PARTIALLY_CAPTURED`, `TERRITORY_CAPTURED` / `TERRITORY_RECLAIMED`, `TERRITORY_LOCKED`, `TERRITORY_ATTACKED`, `RESONATOR_DESTROYED`, `TERRITORY_LOST`.
-
-## 11. Tests
-
-37 automated tests (`node:test`, no extra dependencies) run against **real PostgreSQL**; only Firebase token verification is mocked. They use their own database, `campusquest_test`, which is created and migrated automatically (the name must end in `_test`, so your dev data is never touched).
-
-```bash
-# Inside Docker (containers running; rebuild once to pick up the new script)
-docker compose up --build -d
-docker compose exec api npm test
-
-# Locally (PostgreSQL on localhost:5432 and DB_HOST=localhost in .env)
-npm test
-```
-
-The tests cover joining, derived territory state, riddles and throttling, deploy rules, capture events, attacks and cooldown, the three-player lock, concurrency races (`Promise.all`), and the "game not active" guard.
-

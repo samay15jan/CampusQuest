@@ -19,8 +19,6 @@ services:
       DB_PASSWORD: campus123
     volumes:
       - ./src:/app/src
-      # Needed to run `npm test` inside the container (tests use their own *_test database).
-      - ./test:/app/test
       - ./db:/app/db:ro
     depends_on:
       postgres:
@@ -36,11 +34,11 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      # On a FRESH volume Postgres runs every .sql file in this folder automatically (migrations only).
-      - ./db/migrations:/docker-entrypoint-initdb.d:ro
-      # Whole db/ folder, so migrations and seeds can be run by hand: see README.
-      - ./db:/db:ro
+    - pgdata:/var/lib/postgresql/data
+    - ./db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+    - ./db/migrations/002_game_integrity_indexes.sql:/docker-entrypoint-initdb.d/002_game_integrity_indexes.sql:ro
+    - ./db/seeds/001_demo_data.sql:/docker-entrypoint-initdb.d/003_demo_data.sql:ro
+    # Keep the whole db directory available for manual work
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U campus -d campusquest"]
       interval: 5s
