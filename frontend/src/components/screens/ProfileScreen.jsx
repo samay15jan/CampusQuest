@@ -24,16 +24,15 @@ const TEAMS = {
 
 const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" };
 
-/* ---------- avatars (placeholder art: swap `kind` for real images via `src`) ---------- */
 const AVATARS = [
-  { id: "hood", kind: "hood" },
-  { id: "spike", kind: "spike" },
-  { id: "cap", kind: "cap" },
-  { id: "helmet", kind: "helmet" },
-  { id: "bob", kind: "bob" },
-  { id: "mask", kind: "mask" },
-  { id: "shades", kind: "shades" },
-  { id: "long", kind: "long" },
+  { id: "blue1", src: "/avatars/blue1.jpg", team: "blue" },
+  { id: "blue2", src: "/avatars/blue2.jpg", team: "blue" },
+  { id: "blue3", src: "/avatars/blue3.jpg", team: "blue" },
+  { id: "blue4", src: "/avatars/blue4.jpg", team: "blue" },
+  { id: "red1", src: "/avatars/red1.jpg", team: "red" },
+  { id: "red2", src: "/avatars/red2.jpg", team: "red" },
+  { id: "red3", src: "/avatars/red3.jpg", team: "red" },
+  { id: "red4", src: "/avatars/red4.jpg", team: "red" },
 ];
 
 function AvatarArt({ kind, accent }) {
@@ -127,9 +126,8 @@ export default function ProfileScreen({ team: teamProp }) {
   const teamKey = teamProp ?? location.state?.team ?? "red";
   const team = TEAMS[teamKey] ?? TEAMS.red;
 
-  const [avatar, setAvatar] = useState(AVATARS[0].id);
-  const [username, setUsername] = useState(() => `agent_${Math.floor(100 + Math.random() * 900)}`);
-  const [displayName, setDisplayName] = useState(user?.displayName?.split(" ")[0] ?? "");
+  const [avatar, setAvatar] = useState(`${teamKey}1`);
+  const [username, setUsername] = useState(() => '');
   const [bio, setBio] = useState("");
 
   const usernameValid = useMemo(() => /^[a-z0-9_]{3,16}$/.test(username), [username]);
@@ -147,7 +145,7 @@ export default function ProfileScreen({ team: teamProp }) {
       style={{ "--accent": team.accent, "--glow": team.glow, background: team.wash }}
     >
       {/* top bar */}
-      <header className="relative flex items-center justify-between px-5">
+      <header className="mt-10 relative flex items-center justify-between px-5">
         <div className="flex items-center gap-4">
         </div>
       </header>
@@ -186,28 +184,49 @@ export default function ProfileScreen({ team: teamProp }) {
           </div>
 
           <div role="radiogroup" aria-label="Profile picture" className="mt-4 grid grid-cols-4 gap-2.5">
-            {AVATARS.map((a) => {
-              const selected = a.id === avatar;
-              return (
-                <button
-                  key={a.id}
-                  role="radio"
-                  aria-checked={selected}
-                  aria-label={`Avatar ${a.id}`}
-                  onClick={() => setAvatar(a.id)}
-                  className={`relative aspect-square overflow-hidden rounded-lg border-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                    selected ? "border-[color:var(--accent)] shadow-[0_0_14px_var(--glow)]" : "border-white/10 opacity-80"
-                  }`}
-                >
-                  {a.src ? <img src={a.src} alt="" className="h-full w-full object-cover" /> : <AvatarArt kind={a.kind} accent={team.accent} />}
-                  {selected && (
-                    <span className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full text-white" style={{ background: team.accent }}>
-                      <svg viewBox="0 0 24 24" width="13" height="13" {...stroke} strokeWidth={3}><path d="m5 12 5 5 9-10" /></svg>
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {AVATARS
+              .filter((a) => a.team === teamKey)
+              .map((a) => {
+                const selected = a.id === avatar;
+
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={`Avatar ${a.id}`}
+                    onClick={() => setAvatar(a.id)}
+                    className={`relative aspect-square overflow-hidden rounded-lg border-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${selected
+                      ? "border-[color:var(--accent)] shadow-[0_0_14px_var(--glow)]"
+                      : "border-white/10 opacity-80"
+                      }`}
+                  >
+                    <img
+                      src={a.src}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+
+                    {selected && (
+                      <span
+                        className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full text-white"
+                        style={{ background: team.accent }}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="13"
+                          height="13"
+                          {...stroke}
+                          strokeWidth={3}
+                        >
+                          <path d="m5 12 5 5 9-10" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
           </div>
         </section>
 
@@ -227,6 +246,8 @@ export default function ProfileScreen({ team: teamProp }) {
               autoComplete="off"
               spellCheck={false}
               aria-invalid={!usernameValid}
+              placeholder="Username"
+              required
               className={`${inputBase} pr-11 border-[color:var(--accent)]`}
             />
             {usernameValid && (
