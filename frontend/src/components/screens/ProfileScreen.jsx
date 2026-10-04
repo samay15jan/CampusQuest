@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { checkUsername, updateProfile } from "../../api/account.js";
 
 /* ---------- team themes ---------- */
 const TEAMS = {
@@ -120,23 +121,70 @@ const inputBase =
 export default function ProfileScreen({ team: teamProp }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { account, updateAccount } = useAuth();
 
-  // Team comes from FactionScreen: navigate("/profile", { state: { team: "red" | "blue" } })
-  const teamKey = teamProp ?? location.state?.team ?? "red";
+  // Faction is authoritative on the backend. Route state is no longer required.
+  const teamKey = account?.profile?.faction ?? account?.faction ?? teamProp ?? location.state?.team ?? "red";
   const team = TEAMS[teamKey] ?? TEAMS.red;
 
   const [avatar, setAvatar] = useState(`${teamKey}1`);
   const [username, setUsername] = useState(() => '');
   const [bio, setBio] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  const usernameValid = useMemo(() => /^[a-z0-9_]{3,16}$/.test(username), [username]);
-  // TODO: check username uniqueness against your database before enabling Continue.
+  const usernameValid = useMemo(() => /^[A-Za-z0-9_]{3,16}$/.test(username), [username]);
 
-  const onContinue = () => {
-    if (!usernameValid) return;
-    // TODO: save { uid: user.uid, team: teamKey, avatar, username, displayName, bio } to Firestore.
-    navigate("/dashboard", { state: { team: teamKey } });
+  useEffect(() => {
+    if (!usernameValid) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setCheckingUsername(true);
+      try {
+        const result = await checkUsername(username);
+        if (!cancelled) setUsernameAvailable(result.valid && result.available);
+      } catch {
+        if (!cancelled) setUsernameAvailable(null);
+      } finally {
+        if (!cancelled) setCheckingUsername(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [username, usernameValid]);
+
+  const onContinue = async () => {
+    if (!usernameValid || usernameAvailable !== true || busy) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      await updateProfile({ username, bio, avatar });
+      updateAccount((current) => ({
+        ...current,
+        profile: { ...(current?.profile || {}), username, bio, avatar, faction: teamKey },
+        username,
+        bio,
+        avatar,
+        faction: teamKey,
+        onboarding: { ...(current?.onboarding || {}), needs_faction: false, needs_profile: false, complete: true },
+      }));
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(err.status === 409 ? "That username is already taken." : (err.message || "Couldn't save your profile."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -250,12 +298,17 @@ export default function ProfileScreen({ team: teamProp }) {
               required
               className={`${inputBase} pr-11 border-[color:var(--accent)]`}
             />
-            {usernameValid && (
+            {usernameAvailable === true && (
               <svg viewBox="0 0 24 24" width="24" height="24" {...stroke} className="absolute right-3 top-3 text-emerald-400" aria-label="Username available">
                 <circle cx="12" cy="12" r="9" /><path d="m8 12.5 3 3 5-6" />
               </svg>
             )}
           </div>
+          {usernameValid && (
+            <p className={`mt-1 text-xs ${usernameAvailable === false ? "text-red" : "text-mute"}`}>
+              {checkingUsername ? "Checking availability…" : usernameAvailable === false ? "Username is already taken." : "Username available."}
+            </p>
+          )}
         </Field>
 
         {/* bio */}
@@ -270,13 +323,15 @@ export default function ProfileScreen({ team: teamProp }) {
           <input value={bio} maxLength={60} onChange={(e) => setBio(e.target.value)} placeholder="Here to capture everything." className={`${inputBase} border-white/15`} />
         </Field>
 
+        {error && <p role="alert" className="mt-3 text-center text-sm text-red">{error}</p>}
+
         <button
           onClick={onContinue}
-          disabled={!usernameValid}
+          disabled={!usernameValid || usernameAvailable !== true || busy}
           className="mt-5 flex h-14 w-full items-center justify-center gap-3 rounded-lg border border-white/20 font-display text-sm font-bold uppercase tracking-[0.18em] shadow-[0_0_22px_var(--glow)] transition active:brightness-125 disabled:opacity-40 disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           style={{ background: team.button }}
         >
-          Continue
+          {busy ? "Saving…" : "Continue"}
           <svg viewBox="0 0 24 24" width="18" height="18" {...stroke} strokeWidth={2.2}><path d="m9 5 7 7-7 7" /></svg>
         </button>
       </div>

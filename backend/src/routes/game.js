@@ -1,55 +1,84 @@
-// GET /game and POST /teams/:id/join
+// Gameplay: event status, portals, riddles, verify/deploy, attack, leaderboard, activity, heatmap.
+import { createReadStream } from 'node:fs';
+import { access } from 'node:fs/promises';
+import path from 'node:path';
 import { authenticate } from '../auth/middleware.js';
-import { queryMany, queryOne, withTransaction } from '../db/db.js';
-import { httpError } from '../game/errors.js';
-import { getCurrentGame, getPlayer, logEvent } from '../game/gameService.js';
+import { env } from '../config/env.js';
+import { httpError } from '../lib/errors.js';
+import { getEventStatus } from '../services/eventService.js';
+import { listPortals, getPortalDetail, getPrimaryImage } from '../services/portalService.js';
+import { getTodaysRiddles, submitAnswer } from '../services/riddleService.js';
+import { verifyPortal, deployResonator } from '../services/resonatorService.js';
+import { attackPortal } from '../services/attackService.js';
+import { getLeaderboard, getActivity, getHeatmap } from '../services/socialService.js';
 
-const idParams = {
-  type: 'object',
-  required: ['id'],
-  properties: { id: { type: 'integer', minimum: 1, maximum: 2147483647 } },
-};
+const id = { type: 'object', required: ['id'], properties: { id: { type: 'integer', minimum: 1, maximum: 2147483647 } } };
+const lat = { type: 'number', minimum: -90, maximum: 90 };
+const lng = { type: 'number', minimum: -180, maximum: 180 };
 
 export default async function gameRoutes(app) {
-  // Current game and its teams (with member counts).
-  app.get('/game', { preValidation: authenticate }, async (request) => {
-    const game = await getCurrentGame();
-    if (!game) throw httpError(404, 'No active game');
+  const auth = { preValidation: authenticate };
 
-    const teams = await queryMany(
-      `SELECT t.id, t.name, t.color, t.score, COUNT(u.id)::int AS members
-       FROM teams t LEFT JOIN users u ON u.team_id = t.id
-       WHERE t.game_id = $1
-       GROUP BY t.id
-       ORDER BY t.id`,
-      [game.id]
-    );
-    const me = await queryOne('SELECT team_id FROM users WHERE firebase_uid = $1', [request.user.uid]);
+  // ---- event / map
+  app.get('/event/current', auth, async () => getEventStatus());
 
-    return { ...game, teams, my_team_id: me?.team_id ?? null };
+  app.get('/portals', { ...auth, schema: { querystring: { type: 'object', properties: { owner: { type: 'string', enum: ['red', 'blue'] } } } } },
+    async (request) => listPortals(request.user.uid, { faction: request.query.owner }));
+
+  app.get('/portals/:id', { ...auth, schema: { params: id } }, async (request) => getPortalDetail(request.user.uid, request.params.id));
+
+  // Public on purpose: <img src> cannot send a Bearer header. Reference photos are shown to every player anyway.
+  app.get('/portals/:id/image', { schema: { params: id } }, async (request, reply) => {
+    const img = await getPrimaryImage(request.params.id);
+    if (!img) throw httpError(404, 'No image for this portal');
+    const file = path.join(env.UPLOAD_DIR, img.file_path);
+    await access(file).catch(() => { throw httpError(404, 'Image file missing'); });
+    return reply.header('cache-control', 'public, max-age=300').type(img.mime).send(createReadStream(file));
   });
 
-  // Join a team (once; no switching).
-  app.post('/teams/:id/join', { preValidation: authenticate, schema: { params: idParams } }, async (request) => {
-    return withTransaction(async (client) => {
-      const player = await getPlayer(request.user.uid, { client, lock: true });
-      if (player.team_id) throw httpError(409, 'You are already on a team');
+  // ---- riddles (popup on the map; not tied to a portal)
+  app.get('/riddles/today', auth, async (request) => getTodaysRiddles(request.user.uid));
 
-      const { rows } = await client.query('SELECT id, game_id, name, color FROM teams WHERE id = $1', [request.params.id]);
-      const team = rows[0];
-      if (!team) throw httpError(404, 'Team not found');
+  app.post('/riddles/:id/answer', { ...auth, schema: { params: id, body: { type: 'object', required: ['answer'], properties: { answer: { type: 'string', minLength: 1, maxLength: 200 } } } } },
+    async (request) => submitAnswer(request.user.uid, request.params.id, request.body.answer));
 
-      const game = await getCurrentGame();
-      if (!game) throw httpError(404, 'No active game');
-      if (team.game_id !== game.id) throw httpError(403, 'This team does not belong to the current game');
-
-      await client.query('UPDATE users SET team_id = $1 WHERE id = $2', [team.id, player.id]);
-      await logEvent(client, {
-        gameId: game.id, userId: player.id, teamId: team.id,
-        type: 'PLAYER_JOINED', data: { user_id: player.id, team_id: team.id },
-      });
-
-      return { user_id: player.id, team: { id: team.id, name: team.name, color: team.color, game_id: team.game_id } };
-    });
+  // ---- capture flow: verify (photo + GPS) -> deploy
+  app.post('/portals/:id/verify', { ...auth, schema: { params: id } }, async (request) => {
+    if (!request.isMultipart()) throw httpError(415, 'Send multipart/form-data with fields: photo, latitude, longitude');
+    const fields = {};
+    let photo = null;
+    for await (const part of request.parts()) {
+      if (part.type === 'file') {
+        if (part.fieldname !== 'photo') { await part.toBuffer(); continue; }
+        if (!/^image\/(jpeg|png|webp)$/.test(part.mimetype)) throw httpError(415, 'Photo must be JPEG, PNG or WebP');
+        photo = await part.toBuffer();
+      } else fields[part.fieldname] = part.value;
+    }
+    const latitude = Number(fields.latitude), longitude = Number(fields.longitude);
+    if (!photo?.length) throw httpError(400, 'photo is required (live camera capture)');
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw httpError(400, 'latitude and longitude are required');
+    }
+    return verifyPortal(request.user.uid, request.params.id, { photo, latitude, longitude });
   });
+
+  app.post('/portals/:id/deploy', { ...auth, schema: { params: id, body: { type: 'object', required: ['verification_id'], properties: { verification_id: { type: 'integer', minimum: 1 } } } } },
+    async (request, reply) => reply.code(201).send(await deployResonator(request.user.uid, request.params.id, request.body)));
+
+  app.post('/portals/:id/attack', { ...auth, schema: { params: id, body: { type: 'object', required: ['latitude', 'longitude'], properties: {
+    latitude: lat, longitude: lng, target_resonator_id: { type: 'integer', minimum: 1, maximum: 2147483647 } } } } },
+    async (request) => attackPortal(request.user.uid, request.params.id, request.body));
+
+  // ---- social
+  app.get('/leaderboard', { ...auth, schema: { querystring: { type: 'object', properties: {
+    scope: { type: 'string', enum: ['global', 'red', 'blue'], default: 'global' },
+    period: { type: 'string', enum: ['event', 'all'], default: 'event' },
+    limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 } } } } },
+    async (request) => getLeaderboard(request.user.uid, request.query));
+
+  app.get('/activity', { ...auth, schema: { querystring: { type: 'object', properties: { limit: { type: 'integer', minimum: 1, maximum: 50, default: 20 } } } } },
+    async (request) => getActivity(request.query));
+
+  app.get('/heatmap', { ...auth, schema: { querystring: { type: 'object', properties: { hours: { type: 'integer', minimum: 1, maximum: 120, default: 24 } } } } },
+    async (request) => getHeatmap(request.query));
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../auth/AuthContext.jsx";
 import { useLocation } from "react-router-dom";
 import AmityMap from "../map/AmityMap.jsx";
 import ScoreBar from "../dashboard/ScoreBar.jsx";
@@ -16,7 +17,8 @@ import { teamAccent } from "../../theme.js";
 
 export default function DashboardScreen() {
   const location = useLocation();
-  const team = location.state?.team ?? "red";
+  const { account } = useAuth();
+  const team = account?.profile?.faction ?? account?.faction ?? location.state?.team ?? "red";
   const accent = teamAccent(team);
 
   const [view, setView] = useState("map"); // "map" | "intel" | "profile"
@@ -50,6 +52,7 @@ export default function DashboardScreen() {
 
       {view === "profile" && (
         <PlayerProfile
+          account={account}
           team={team}
           onOpenLeaderboard={() => setBoardOpen(true)}
           onSettings={() => console.log("TODO: open settings / sign out")}

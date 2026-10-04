@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HudBox, Label } from "../auth/Hud.jsx";
+import { chooseFaction } from "../../api/account.js";
+import { useAuth } from "../auth/AuthContext.jsx";
 
 const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" };
 
@@ -37,7 +39,10 @@ const BENEFITS = [
 
 export default function FactionScreen() {
   const navigate = useNavigate();
+  const { updateAccount } = useAuth();
   const [selected, setSelected] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <main className="flex min-h-dvh flex-col bg-ink px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-white">
@@ -93,9 +98,30 @@ export default function FactionScreen() {
         </HudBox>
       </section>
 
+      {error && <p role="alert" className="mt-3 text-center text-sm text-red">{error}</p>}
+
       <button
-        onClick={() => navigate("/profile", { state: { team: selected } })}
-        disabled={!selected}
+        onClick={async () => {
+          if (!selected || busy) return;
+          setBusy(true);
+          setError("");
+
+          try {
+            await chooseFaction(selected);
+            updateAccount((current) => ({
+              ...current,
+              faction: selected,
+              profile: { ...(current?.profile || {}), faction: selected },
+              onboarding: { ...(current?.onboarding || {}), needs_faction: false, needs_profile: true, complete: false },
+            }));
+            navigate("/profile", { replace: true });
+          } catch (err) {
+            setError(err.status === 409 ? "Faction has already been chosen." : (err.message || "Couldn't choose faction."));
+          } finally {
+            setBusy(false);
+          }
+        }}
+        disabled={!selected || busy}
         className="mt-auto block w-full pt-6 text-left disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
       >
         <HudBox
@@ -104,7 +130,7 @@ export default function FactionScreen() {
           innerClass={selected === "red" ? "bg-[#4a0d12]" : selected === "blue" ? "bg-[#0c2b66]" : "bg-panel"}
         >
           <span className={`flex h-14 items-center justify-center gap-3 font-display text-xs font-bold uppercase tracking-[0.24em] ${selected ? "text-white" : "text-[#3a4a68]"}`}>
-            Confirm faction
+            {busy ? "Saving faction…" : "Confirm faction"}
             <svg viewBox="0 0 24 24" width="18" height="18" {...stroke} aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
           </span>
         </HudBox>

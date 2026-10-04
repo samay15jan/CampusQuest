@@ -26,14 +26,25 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, account, accountLoading, accountError } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Already signed in (or just returned from a redirect sign-in): go straight in.
+  // Firebase auth is only the first step. Wait for the backend account
+  // bootstrap before deciding which onboarding screen to show.
   useEffect(() => {
-    if (!loading && user) navigate("/faction", { replace: true });
-  }, [user, loading, navigate]);
+    if (loading || accountLoading || !user || !account) return;
+
+    const { needs_faction, needs_profile } = account.onboarding || {};
+
+    if (needs_faction) {
+      navigate("/faction", { replace: true });
+    } else if (needs_profile) {
+      navigate("/profile", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, loading, account, accountLoading, navigate]);
 
   const signInWithGoogle = async () => {
     setError("");
@@ -104,8 +115,10 @@ export default function LoginScreen() {
           </HudBox>
         </button>
 
-        {error && (
-          <p role="alert" className="mt-4 text-center text-[13px] leading-5 text-red">{error}</p>
+        {(error || accountError) && (
+          <p role="alert" className="mt-4 text-center text-[13px] leading-5 text-red">
+            {error || "Signed in, but the CampusQuest server could not create your account. Check the API and try again."}
+          </p>
         )}
 
         <p className="mt-6 text-center text-[13px] leading-5 text-mute">

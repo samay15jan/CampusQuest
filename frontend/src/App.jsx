@@ -11,7 +11,6 @@ import "./index.css";
 export default function App() {
   return (
     <>
-      {/* Wider than a phone: show only the "Open on mobile" screen. */}
       <div className="hidden md:block">
         <DesktopGate />
       </div>
