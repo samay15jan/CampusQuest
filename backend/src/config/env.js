@@ -44,8 +44,9 @@ export const env = {
   // Dev switches: hard-disabled in production.
   DEV_AUTH_BYPASS: !isProd && bool(process.env.DEV_AUTH_BYPASS),
   DEV_IGNORE_HOURS: !isProd && bool(process.env.DEV_IGNORE_HOURS),
+  DEV_FORCE_EVENT_ACTIVE: !isProd && bool(process.env.DEV_FORCE_EVENT_ACTIVE),
 };
 
-if (isProd && (bool(process.env.DEV_AUTH_BYPASS) || bool(process.env.DEV_IGNORE_HOURS))) {
-  throw new Error('DEV_AUTH_BYPASS / DEV_IGNORE_HOURS must not be set in production');
+if (isProd && (bool(process.env.DEV_AUTH_BYPASS) || bool(process.env.DEV_IGNORE_HOURS) || bool(process.env.DEV_FORCE_EVENT_ACTIVE))) {
+  throw new Error('DEV_AUTH_BYPASS / DEV_IGNORE_HOURS / DEV_FORCE_EVENT_ACTIVE must not be set in production');
 }

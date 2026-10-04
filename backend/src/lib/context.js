@@ -26,7 +26,16 @@ export async function getCurrentEvent(run = query) {
      WHERE status IN ('active', 'scheduled')
      ORDER BY (status = 'active') DESC, starts_at LIMIT 1`
   );
-  return rows[0] ?? null;
+  const ev = rows[0] ?? null;
+  if (!ev) return null;
+
+  // Development-only: treat the next scheduled event as active without mutating
+  // its database status. This lets the full game flow be tested before Monday.
+  if (env.DEV_FORCE_EVENT_ACTIVE && ev.status === 'scheduled') {
+    return { ...ev, status: 'active', dev_forced_active: true };
+  }
+
+  return ev;
 }
 
 /** The event must be running AND it must be campus hours (Mon-Fri 9-5). */

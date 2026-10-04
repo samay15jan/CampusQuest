@@ -8,6 +8,7 @@ export const gameConfig = {
   PLAY_DAYS: [1, 2, 3, 4, 5],   // Mon-Fri (ISO: Mon=1 ... Sun=7); Sat/Sun off
   PORTAL_WINDOWS: env.PORTAL_WINDOWS.split(',').map((w) => w.trim()).filter(Boolean), // "HH:MM-HH:MM"
   IGNORE_HOURS: env.DEV_IGNORE_HOURS,
+  FORCE_EVENT_ACTIVE: env.DEV_FORCE_EVENT_ACTIVE,
 
   EVENT_PORTAL_COUNT: 10,       // portals picked at random from the master list each week
   RESONATORS_TO_CAPTURE: 3,     // 3 active resonators from one faction = controlled
@@ -20,7 +21,7 @@ export const gameConfig = {
   ATTACK_COOLDOWN_SECONDS: 60,
 
   XP: {
-    RIDDLE_SOLVED: 100,
+    RIDDLE_SOLVED: 0,
     RESONATOR_DEPLOYED: 50,
     RESONATOR_DESTROYED: 30,
     PORTAL_CAPTURED: 100,        // bonus to the player who places the 3rd resonator
