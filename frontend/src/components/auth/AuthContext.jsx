@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      console.log(auth)
     });
   }, []);
 

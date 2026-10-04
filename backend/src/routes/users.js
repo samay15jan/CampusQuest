@@ -4,7 +4,7 @@ import { queryOne } from '../db/db.js';
 
 // Public fields only: no email, firebase_uid, or last_seen.
 const PUBLIC_USER_SQL = `
-  SELECT id, name, avatar_url, team_id, created_at
+  SELECT id, name, username, bio, avatar, avatar_url, team_id, created_at
   FROM users
   WHERE id = $1
 `;

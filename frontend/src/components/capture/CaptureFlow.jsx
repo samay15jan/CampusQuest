@@ -10,8 +10,8 @@ import DeployResonator from "./DeployResonator.jsx";
  * brief -> camera -> verifying -> result -> deploy
  * Each step is mounted only while active, so the camera stream is released as soon as you leave it.
  */
-export default function CaptureFlow({ portal, accent, onClose, onComplete }) {
-  const [step, setStep] = useState("brief");
+export default function CaptureFlow({ portal, accent, startAt = "brief", onClose, onComplete }) {
+  const [step, setStep] = useState(startAt);
   const [photo, setPhoto] = useState(null);
   const [result, setResult] = useState(null);
 
@@ -21,7 +21,7 @@ export default function CaptureFlow({ portal, accent, onClose, onComplete }) {
         <PortalBrief portal={portal} accent={accent} onBack={onClose} onCapture={() => setStep("camera")} />
       )}
       {step === "camera" && (
-        <CameraCapture accent={accent} onClose={() => setStep("brief")} onCapture={(p) => { setPhoto(p); setStep("verifying"); }} />
+        <CameraCapture accent={accent} onClose={() => (startAt === "camera" ? onClose() : setStep("brief"))} onCapture={(p) => { setPhoto(p); setStep("verifying"); }} />
       )}
       {step === "verifying" && (
         <Verifying portal={portal} photo={photo} accent={accent} onBack={() => setStep("camera")} onDone={(r) => { setResult(r); setStep("result"); }} />

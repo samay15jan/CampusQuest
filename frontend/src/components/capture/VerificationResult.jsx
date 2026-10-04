@@ -60,7 +60,9 @@ export default function VerificationResult({ portal, photo, result, accent, onBa
             <div key={label} className="contents">
               {i === 1 && <Icon name="frame" size={22} className="shrink-0 text-mute" />}
               <figure className="flex-1 text-center">
-                <img src={src} alt={label} className="h-24 w-full rounded-lg border border-white/10 object-cover" />
+                {src
+                  ? <img src={src} alt={label} className="h-24 w-full rounded-lg border border-white/10 object-cover" />
+                  : <div className="grid h-24 w-full place-items-center rounded-lg border border-white/10 bg-white/5 text-xs text-mute">No reference</div>}
                 <figcaption className="mt-2 text-xs text-mute">{label}</figcaption>
               </figure>
             </div>

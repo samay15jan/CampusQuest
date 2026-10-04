@@ -7,6 +7,8 @@ import BottomNav from "../dashboard/BottomNav.jsx";
 import IntelPanel from "../intel/IntelPanel.jsx";
 import PortalDetail from "../intel/PortalDetail.jsx";
 import CaptureFlow from "../capture/CaptureFlow.jsx";
+import RiddleFlow from "../riddle/RiddleFlow.jsx";
+import useSolved from "../riddle/useSolved.js";
 import PlayerProfile from "../profile/PlayerProfile.jsx";
 import LeaderboardScreen from "../leaderboard/LeaderboardScreen.jsx";
 import { PORTALS } from "../../data/mock.js";
@@ -19,6 +21,8 @@ export default function DashboardScreen() {
 
   const [view, setView] = useState("map"); // "map" | "intel" | "profile"
   const [selected, setSelected] = useState(null); // portal shown on the Intel detail page
+  const { solvedIds, markSolved } = useSolved();
+  const [riddleLoc, setRiddleLoc] = useState(null); // map location whose riddle flow is open
   const [boardOpen, setBoardOpen] = useState(false); // leaderboard page
   const [capturing, setCapturing] = useState(null); // portal being captured
   const [layers, setLayers] = useState({ portals: true, links: true, territories: true });
@@ -34,7 +38,7 @@ export default function DashboardScreen() {
   return (
     <main className="relative h-dvh overflow-hidden bg-ink text-white">
       {/* The map is always mounted and always full-screen; everything else overlays it. */}
-      <div className="absolute inset-0"><AmityMap /></div>
+      <div className="absolute inset-0"><AmityMap onSelectLocation={setRiddleLoc} solvedIds={solvedIds} /></div>
 
       <ScoreBar />
 
@@ -64,6 +68,21 @@ export default function DashboardScreen() {
       )}
 
       {boardOpen && <LeaderboardScreen accent={accent} onBack={() => setBoardOpen(false)} />}
+
+      {riddleLoc && (
+        <RiddleFlow
+          location={riddleLoc}
+          accent={accent}
+          solved={solvedIds.includes(riddleLoc.id)}
+          onSolved={markSolved}
+          onClose={() => setRiddleLoc(null)}
+          onComplete={(res) => {
+            // TODO: save capture + XP (riddle + capture) to Firestore
+            console.log("Captured via riddle flow", res);
+            setRiddleLoc(null);
+          }}
+        />
+      )}
 
       {capturing && (
         <CaptureFlow

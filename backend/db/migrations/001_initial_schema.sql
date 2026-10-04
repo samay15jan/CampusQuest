@@ -83,14 +83,20 @@ CREATE TABLE IF NOT EXISTS users (
   firebase_uid VARCHAR(128) NOT NULL,
   name         VARCHAR(255) NOT NULL,
   email        VARCHAR(255) NOT NULL,
-  avatar_url   TEXT,
+  avatar_url   TEXT,                                   -- Firebase/Google photo
+  username     VARCHAR(20),                            -- NULL until the player picks one
+  bio          VARCHAR(160) NOT NULL
+                 DEFAULT 'New to CampusQuest. Ready to capture some territory!',
+  avatar       VARCHAR(5),                             -- preset key: red1-4 / blue1-4; NULL = none chosen
   team_id      INTEGER REFERENCES teams(id) ON DELETE SET NULL,  -- membership, not history
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen    TIMESTAMPTZ,
 
   -- UNIQUE constraints create the indexes on firebase_uid and email.
   CONSTRAINT uq_users_firebase_uid UNIQUE (firebase_uid),
-  CONSTRAINT uq_users_email        UNIQUE (email)
+  CONSTRAINT uq_users_email        UNIQUE (email),
+  CONSTRAINT chk_users_username CHECK (username IS NULL OR username ~ '^[A-Za-z0-9_]{3,20}$'),
+  CONSTRAINT chk_users_avatar   CHECK (avatar IS NULL OR avatar ~ '^(red|blue)[1-4]$')
 );
 
 -- =====================================================================
@@ -271,6 +277,8 @@ CREATE TRIGGER trg_territories_updated_at
 -- (users.firebase_uid and users.email are already indexed by their UNIQUE constraints.)
 -- =====================================================================
 CREATE INDEX IF NOT EXISTS idx_users_team_id                ON users (team_id);
+-- Usernames are unique, case-insensitively ("Sam" and "sam" collide).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username_lower ON users (lower(username));
 
 CREATE INDEX IF NOT EXISTS idx_teams_game_id                ON teams (game_id);
 

@@ -7,7 +7,7 @@ Node.js (JavaScript, ES Modules) + Fastify + PostgreSQL (`pg`) + Firebase Admin 
 |---|---|---|---|---|
 | `GET` | `/me` | Get/create the authenticated player's profile | Firebase | None |
 | `POST` | `/me/team` | Assign the authenticated player to a team | Firebase | Body: `{ "team_id": "Red" \| "Blue" }` |
-
+| `PATCH` | `/me/profile` | Set or update the authenticated player's username, bio and avatar | Firebase | Body (send any subset, at least one): `{ "username": string, "bio": string, "avatar": "red1"-"red4" \| "blue1"-"blue4" }` |
 
 REQUIRED: `Authorization: Bearer <Firebase ID Token>`
 

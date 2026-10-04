@@ -3,6 +3,8 @@ import { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { LOCATIONS, ICONS } from "../../data/locations.js";
+
 const CENTER = [77.3336, 28.5445];
 
 const BOUNDS = [
@@ -36,47 +38,6 @@ const EXCLUDED_POLYGON = [
   [77.333836, 28.545764],
   [77.334087, 28.545513],
 ];
-
-/*
- * CampusQuest locations
- * (from CampusQuest_Final_Locations_Missions_Riddles.docx).
- * `icon` is a key into ICONS below.
- */
-const LOCATIONS = [
-  { id: 1, icon: "mic", name: "H Block Centre", mission: "The Spotlight", lat: 28.546582, lng: 77.334419 },
-  { id: 2, icon: "helipad", name: "Helipad", mission: "The Landing Zone", lat: 28.544243, lng: 77.334365 },
-  { id: 3, icon: "palm", name: "Palm Court", mission: "Palm Pursuit", lat: 28.543837, lng: 77.333223 },
-  { id: 4, icon: "ball", name: "Sports Complex Room", mission: "The Arsenal", lat: 28.543981, lng: 77.331631 },
-  { id: 5, icon: "coffee", name: "N Block Coffee", mission: "The Odd One Out", lat: 28.547175, lng: 77.333267 },
-  { id: 6, icon: "book", name: "Library", mission: "The False Mall", lat: 28.543964, lng: 77.33465 },
-  { id: 7, icon: "gate", name: "Gate No. 2", mission: "The Balli Route", lat: 28.541924, lng: 77.333188 },
-  { id: 8, icon: "food", name: "I Block Mess", mission: "The Crispy Secret", lat: 28.54301, lng: 77.333489 },
-  { id: 9, icon: "burger", name: "Megabyte", mission: "The Mega Feast", lat: 28.544999, lng: 77.334564 },
-  { id: 10, icon: "truck", name: "Rara's Food Truck", mission: "The Fry Trail", lat: 28.545003, lng: 77.334977 },
-  { id: 11, icon: "paddle", name: "Arcadia Pickleball Court", mission: "The Lost Realm", lat: 28.543347, lng: 77.332344 },
-  { id: 12, icon: "bowl", name: "Cafedia", mission: "The Momo Hunt", lat: 28.543347, lng: 77.332344 },
-  { id: 13, icon: "mic", name: "J2 Block Entrance", mission: "The Debate Ground", lat: 28.54326, lng: 77.332735 },
-  { id: 14, icon: "fruit", name: "Hidden Fruit Shop", mission: "The Hidden Harvest", lat: 28.546266, lng: 77.334563 },
-  { id: 15, icon: "bank", name: "The Bank", mission: "The Vault", lat: 28.545154, lng: 77.332206 },
-];
-
-/* Marker icons: 24x24 stroke icons, keyed by LOCATIONS[].icon. */
-const ICONS = {
-  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/>',
-  helipad: '<circle cx="12" cy="12" r="10"/><path d="M9 7v10M15 7v10M9 12h6"/>',
-  palm: '<path d="M12 22V11M12 11C9 9 6 10 4 13M12 11c3-2 6-1 8 2M12 11C11 8 9 6 6 6M12 11c1-3 3-5 6-5"/>',
-  ball: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20"/>',
-  coffee: '<path d="M17 8h1a4 4 0 0 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4ZM6 2v3M10 2v3M14 2v3"/>',
-  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
-  gate: '<path d="M5 21V9a7 7 0 0 1 14 0v12M3 21h18M12 2v19"/>',
-  food: '<path d="M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zM21 15v7"/>',
-  burger: '<path d="M4 11a8 8 0 0 1 16 0zM3 15h18M5 19h14"/>',
-  truck: '<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
-  paddle: '<circle cx="12" cy="9" r="6"/><path d="M12 15v7M10 22h4"/>',
-  bowl: '<path d="M3 12h18a9 9 0 0 1-18 0zM8 4c0 2 2 2 2 4M14 4c0 2 2 2 2 4"/>',
-  fruit: '<path d="M12 7c-1-3-4-3-5-1-2 3-1 9 2 12 1 1 2 1 3 0 1 1 2 1 3 0 3-3 4-9 2-12-1-2-4-2-5 1zM12 7c0-2 1-4 3-5"/>',
-  bank: '<path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/>',
-};
 
 async function copyText(text) {
   try {
@@ -112,11 +73,20 @@ function smoothHeading(current, target) {
   return normalizeHeading(current + difference * 0.15);
 }
 
-export default function AmityMap() {
+/**
+ * Props
+ *  - onSelectLocation(loc): called when a location marker is tapped (replaces the popup)
+ *  - solvedIds: location ids whose riddle is solved; their markers turn red
+ */
+export default function AmityMap({ onSelectLocation, solvedIds = [] }) {
   const container = useRef(null);
 
   const mapRef = useRef(null);
   const timerRef = useRef(null);
+
+  const onSelectRef = useRef(onSelectLocation);
+  onSelectRef.current = onSelectLocation;
+  const markerEls = useRef(new Map());
 
   const compassEnabledRef = useRef(false);
   const headingRef = useRef(null);
@@ -407,6 +377,7 @@ export default function AmityMap() {
         "campus-marker pointer-events-none flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-gray-300 bg-gray-500 text-white opacity-0 shadow-md transition-opacity duration-500";
       el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[loc.icon]}</svg>`;
       campusMarkers.push(el);
+      markerEls.current.set(loc.id, el);
 
       const content = document.createElement("div");
       content.className = "font-sans text-sm text-slate-900";
@@ -425,10 +396,15 @@ export default function AmityMap() {
         content,
       );
 
-      new Marker({ element: el })
-        .setLngLat([loc.lng, loc.lat])
-        .setPopup(popup)
-        .addTo(map);
+      const marker = new Marker({ element: el }).setLngLat([loc.lng, loc.lat]);
+
+      if (onSelectRef.current) {
+        el.addEventListener("click", () => onSelectRef.current?.(loc));
+      } else {
+        marker.setPopup(popup);
+      }
+
+      marker.addTo(map);
     });
 
     return () => {
@@ -438,10 +414,25 @@ export default function AmityMap() {
 
       window.removeEventListener("deviceorientation", handleOrientation, true);
 
+      markerEls.current.clear();
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Tint markers whose riddle is solved.
+  const solvedKey = solvedIds.join(",");
+  useEffect(() => {
+    const solved = new Set(solvedIds);
+
+    markerEls.current.forEach((el, id) => {
+      const on = solved.has(id);
+      el.classList.toggle("bg-red-600", on);
+      el.classList.toggle("border-red-300", on);
+      el.classList.toggle("bg-gray-500", !on);
+      el.classList.toggle("border-gray-300", !on);
+    });
+  }, [solvedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const latlng = point ? `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}` : "";
 
