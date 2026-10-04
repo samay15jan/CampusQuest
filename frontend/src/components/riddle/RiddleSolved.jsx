@@ -15,32 +15,38 @@ function Diamond({ color }) {
   );
 }
 
-export default function RiddleSolved({ accent, xp, onBack, onContinue }) {
+export default function RiddleSolved({ accent, xp, resonator = 1, onBack, onContinue }) {
   return (
     <div className="relative flex h-full flex-col" style={{ background: `radial-gradient(70% 40% at 50% 28%, ${accent}33, transparent 70%)` }}>
       <ScreenHeader title="Riddle Unlocked" onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 pb-28">
         <div className="mt-6"><Diamond color={accent} /></div>
         <h2 className="mt-2 text-center font-display text-3xl font-bold">Correct!</h2>
-        <p className="mt-2 text-center text-sm text-mute">The portal has been unlocked.</p>
+        <p className="mt-2 text-center text-sm text-mute">You earned a resonator from today's riddle.</p>
 
         <section className="mt-8 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border" style={{ borderColor: accent, background: `${accent}22`, color: accent }}><Icon name="unlock" size={26} /></span>
           <div>
-            <p className="text-sm font-semibold">Portal Unlocked</p>
-            <p className="mt-0.5 text-xs leading-5 text-mute">You can now verify the location and deploy a resonator.</p>
+            <p className="text-sm font-semibold">Resonator Earned</p>
+            <p className="mt-0.5 text-xs leading-5 text-mute">The resonator is ready for deployment.</p>
           </div>
         </section>
 
         <section className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
           <p className="text-sm font-semibold">Rewards</p>
-          <p className="mt-3 flex items-center gap-3 font-display text-xl font-bold" style={{ color: "#ffb020" }}>
-            <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#ff7a1a]/25 text-xs font-black text-[#ff7a1a]">XP</span>+{xp} XP
-          </p>
+          <div className="mt-3 space-y-3">
+            <p className="flex items-center gap-3 font-display text-xl font-bold" style={{ color: "#ffb020" }}>
+              <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#ff7a1a]/25 text-xs font-black text-[#ff7a1a]">XP</span>+{xp} XP
+            </p>
+            <p className="flex items-center gap-3 text-sm font-semibold">
+              <span className="grid h-11 w-11 place-items-center rounded-lg border border-white/10 bg-white/5">×{resonator}</span>
+              Resonator added to inventory
+            </p>
+          </div>
         </section>
       </div>
       <BottomAction>
-        <PrimaryButton accent={accent} onClick={onContinue}>Continue to Capture <Icon name="chevron" size={18} /></PrimaryButton>
+        <PrimaryButton accent={accent} onClick={onContinue}>Continue <Icon name="chevron" size={18} /></PrimaryButton>
       </BottomAction>
     </div>
   );

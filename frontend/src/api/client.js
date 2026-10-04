@@ -1,6 +1,6 @@
 import { auth } from "../components/utils/firebase.js";
 
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
 
 export async function apiFetch(path, options = {}) {
   const user = auth.currentUser;

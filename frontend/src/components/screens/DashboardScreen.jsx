@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useAuth } from "../auth/AuthContext.jsx";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import AmityMap from "../map/AmityMap.jsx";
 import ScoreBar from "../dashboard/ScoreBar.jsx";
@@ -9,57 +8,103 @@ import IntelPanel from "../intel/IntelPanel.jsx";
 import PortalDetail from "../intel/PortalDetail.jsx";
 import CaptureFlow from "../capture/CaptureFlow.jsx";
 import RiddleFlow from "../riddle/RiddleFlow.jsx";
-import useSolved from "../riddle/useSolved.js";
 import PlayerProfile from "../profile/PlayerProfile.jsx";
 import LeaderboardScreen from "../leaderboard/LeaderboardScreen.jsx";
-import { PORTALS } from "../../data/mock.js";
 import { teamAccent } from "../../theme.js";
+import { getCurrentEvent } from "../../api/event.js";
+import { getPortal, getPortals } from "../../api/portals.js";
 
 export default function DashboardScreen() {
   const location = useLocation();
-  const { account } = useAuth();
-  const team = account?.profile?.faction ?? account?.faction ?? location.state?.team ?? "red";
+  const team = location.state?.team ?? "red";
   const accent = teamAccent(team);
 
   const [view, setView] = useState("map"); // "map" | "intel" | "profile"
   const [selected, setSelected] = useState(null); // portal shown on the Intel detail page
-  const { solvedIds, markSolved } = useSolved();
-  const [riddleLoc, setRiddleLoc] = useState(null); // map location whose riddle flow is open
+  const [riddlesOpen, setRiddlesOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false); // leaderboard page
   const [capturing, setCapturing] = useState(null); // portal being captured
   const [layers, setLayers] = useState({ portals: true, links: true, territories: true });
+  const [event, setEvent] = useState(null);
+  const [portals, setPortals] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadGameState = async () => {
+      try {
+        const [eventData, portalData] = await Promise.all([
+          getCurrentEvent(),
+          getPortals(),
+        ]);
+        if (!mounted) return;
+        setEvent(eventData);
+        setPortals(portalData);
+      } catch (error) {
+        console.error("Failed to load game state", error);
+      }
+    };
+
+    loadGameState();
+    const id = window.setInterval(loadGameState, 30_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(id);
+    };
+  }, []);
 
   // Tapping the active tab again (other than Map) closes it and returns to the plain map.
   const onNav = (id) => setView(id === view && id !== "map" ? "map" : id);
 
-  const openPortal = (portal) => {
+  const openPortal = async (portal) => {
     setView("intel");
     setSelected(portal);
+
+    try {
+      const detail = await getPortal(portal.id);
+      setSelected(detail);
+    } catch (error) {
+      console.error("Failed to load portal detail", error);
+    }
   };
 
   return (
     <main className="relative h-dvh overflow-hidden bg-ink text-white">
       {/* The map is always mounted and always full-screen; everything else overlays it. */}
-      <div className="absolute inset-0"><AmityMap onSelectLocation={setRiddleLoc} solvedIds={solvedIds} /></div>
+      <div className="absolute inset-0"><AmityMap portals={portals} onSelectPortal={openPortal} /></div>
 
-      <ScoreBar />
+      <ScoreBar event={event} />
 
-      {view === "map" && <CurrentPortal portal={PORTALS[0]} onClick={() => openPortal(PORTALS[0])} />}
+      {event?.event?.status === "active" && event?.game_open && (
+        <button
+          type="button"
+          onClick={() => setRiddlesOpen(true)}
+          className="absolute inset-x-2 top-[13.25rem] z-10 flex items-center gap-3 rounded-xl border border-white/10 bg-[#0b0d16]/95 p-3 text-left shadow-lg backdrop-blur"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-lg">?</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-sm font-bold">Daily Riddles</span>
+            <span className="mt-0.5 block text-xs text-mute">Solve today's riddles to earn resonators and XP.</span>
+          </span>
+          <span className="text-mute">→</span>
+        </button>
+      )}
+
+      {view === "map" && portals[0] && <CurrentPortal portal={portals[0]} onClick={() => openPortal(portals[0])} />}
 
       {view === "intel" && (
-        <IntelPanel portals={PORTALS} onSelect={setSelected} accent={accent} layers={layers} onLayersChange={setLayers} />
+        <IntelPanel portals={portals} onSelect={openPortal} accent={accent} layers={layers} onLayersChange={setLayers} />
       )}
 
       {view === "profile" && (
         <PlayerProfile
-          account={account}
           team={team}
           onOpenLeaderboard={() => setBoardOpen(true)}
           onSettings={() => console.log("TODO: open settings / sign out")}
         />
       )}
 
-      <BottomNav view={view} onChange={onNav} accent={accent} onScan={() => setCapturing(PORTALS[0])} />
+      <BottomNav view={view} onChange={onNav} accent={accent} onScan={() => portals[0] && setCapturing(portals[0])} />
 
       {selected && (
         <PortalDetail
@@ -72,18 +117,10 @@ export default function DashboardScreen() {
 
       {boardOpen && <LeaderboardScreen accent={accent} onBack={() => setBoardOpen(false)} />}
 
-      {riddleLoc && (
+      {riddlesOpen && (
         <RiddleFlow
-          location={riddleLoc}
           accent={accent}
-          solved={solvedIds.includes(riddleLoc.id)}
-          onSolved={markSolved}
-          onClose={() => setRiddleLoc(null)}
-          onComplete={(res) => {
-            // TODO: save capture + XP (riddle + capture) to Firestore
-            console.log("Captured via riddle flow", res);
-            setRiddleLoc(null);
-          }}
+          onClose={() => setRiddlesOpen(false)}
         />
       )}
 

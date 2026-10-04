@@ -14,7 +14,7 @@ export default function CurrentPortal({ portal, onClick }) {
         <span className="block text-sm font-semibold">{portal.name}</span>
         <span className="flex items-center gap-1.5 text-xs" style={{ color: o.color }}>
           <span className="h-2 w-2 rounded-full" style={{ background: o.color }} /> {o.label}
-          <span className="text-mute">+20/min</span>
+          <span className="text-mute">{portal.resonators?.total ?? 0}/3 resonators</span>
         </span>
       </span>
       <Icon name="chevron" size={16} className="text-mute" />

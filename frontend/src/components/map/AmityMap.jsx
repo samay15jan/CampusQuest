@@ -78,7 +78,7 @@ function smoothHeading(current, target) {
  *  - onSelectLocation(loc): called when a location marker is tapped (replaces the popup)
  *  - solvedIds: location ids whose riddle is solved; their markers turn red
  */
-export default function AmityMap({ onSelectLocation, solvedIds = [] }) {
+export default function AmityMap({ portals = [], onSelectPortal, onSelectLocation, solvedIds = [] }) {
   const container = useRef(null);
 
   const mapRef = useRef(null);
@@ -86,7 +86,10 @@ export default function AmityMap({ onSelectLocation, solvedIds = [] }) {
 
   const onSelectRef = useRef(onSelectLocation);
   onSelectRef.current = onSelectLocation;
+  const onSelectPortalRef = useRef(onSelectPortal);
+  onSelectPortalRef.current = onSelectPortal;
   const markerEls = useRef(new Map());
+  const portalMarkersRef = useRef(new Map());
 
   const compassEnabledRef = useRef(false);
   const headingRef = useRef(null);
@@ -415,10 +418,57 @@ export default function AmityMap({ onSelectLocation, solvedIds = [] }) {
       window.removeEventListener("deviceorientation", handleOrientation, true);
 
       markerEls.current.clear();
+      portalMarkersRef.current.forEach((marker) => marker.remove());
+      portalMarkersRef.current.clear();
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Render backend event portals independently from the existing riddle/location markers.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const current = portalMarkersRef.current;
+    const nextIds = new Set(portals.map((portal) => String(portal.id)));
+
+    for (const [id, marker] of current) {
+      if (!nextIds.has(id)) {
+        marker.remove();
+        current.delete(id);
+      }
+    }
+
+    const ownerColors = { red: "#ff3b3b", blue: "#3b82f6", neutral: "#9ca3af" };
+
+    portals.forEach((portal) => {
+      const id = String(portal.id);
+      let marker = current.get(id);
+      const color = ownerColors[portal.owner] || ownerColors.neutral;
+
+      if (!marker) {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-[#0b0d16] shadow-lg transition-transform active:scale-90";
+        el.setAttribute("aria-label", portal.name);
+        el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS.tower}</svg>`;
+        el.addEventListener("click", () => onSelectPortalRef.current?.(portal));
+        marker = new Marker({ element: el, anchor: "center" }).setLngLat([portal.longitude, portal.latitude]).addTo(map);
+        current.set(id, marker);
+      } else {
+        marker.setLngLat([portal.longitude, portal.latitude]);
+      }
+
+      const el = marker.getElement();
+      el.style.color = color;
+      el.style.borderColor = color;
+      el.style.boxShadow = `0 0 14px ${color}66`;
+      el.title = `${portal.name} · ${portal.resonators?.total ?? 0}/3`;
+    });
+
+    return () => {};
+  }, [portals]);
 
   // Tint markers whose riddle is solved.
   const solvedKey = solvedIds.join(",");
