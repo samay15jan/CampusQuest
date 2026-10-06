@@ -1,106 +1,105 @@
-const CACHE_NAME = "campusquest-v1";
+// CampusQuest service worker.
+// Bump CACHE_VERSION on any change here to flush old caches.
+const CACHE_VERSION = "v2";
+const SHELL_CACHE = `campusquest-shell-${CACHE_VERSION}`;
+const ASSET_CACHE = `campusquest-assets-${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline.html";
 
-const APP_SHELL = [
+const PRECACHE = [
   "/",
-  "/offline.html",
+  OFFLINE_URL,
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
 ];
 
-// Install: cache the minimum shell required to open the PWA.
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches
+      .open(SHELL_CACHE)
+      // Don't let one failed file block installation.
+      .then((cache) => Promise.allSettled(PRECACHE.map((u) => cache.add(u))))
   );
-
   self.skipWaiting();
 });
 
-// Activate: remove old CampusQuest caches.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith("campusquest-") && k !== SHELL_CACHE && k !== ASSET_CACHE)
+            .map((k) => caches.delete(k))
+        )
       )
-    )
+      .then(() => self.clients.claim())
   );
-
-  self.clients.claim();
 });
 
-// Fetch strategy:
-// - Navigation: network first, then cached app, then offline page.
-// - GET static assets: cache first.
-// - API requests: network only.
-// - POST/PUT/PATCH/DELETE: untouched; game actions must reach the server.
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-
-  if (request.method !== "GET") {
-    return;
-  }
+  if (request.method !== "GET") return;
 
   const url = new URL(request.url);
 
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return;
-  }
+  // Only handle same-origin requests. Everything else (game API on another
+  // domain, Firebase auth, map tiles, Google Fonts) goes straight to network,
+  // so live game data is never served from cache.
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;
 
-  // Never cache API responses or authenticated game data.
-  if (url.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  // HTML/navigation requests: prefer fresh content.
+  // Page navigations: network first, fall back to cached app shell / offline page.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, copy);
-            });
+            caches.open(SHELL_CACHE).then((c) => c.put("/", copy));
           }
-
           return response;
         })
         .catch(async () => {
-          const cache = await caches.open(CACHE_NAME);
-
-          return (
-            (await cache.match(request)) ||
-            (await cache.match("/")) ||
-            (await cache.match(OFFLINE_URL))
-          );
+          const cache = await caches.open(SHELL_CACHE);
+          return (await cache.match("/")) || (await cache.match(OFFLINE_URL));
         })
     );
-
     return;
   }
 
-  // Static assets: cache first, then network.
+  // Vite's fingerprinted bundles never change for a given filename: cache first.
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request).then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(ASSET_CACHE).then((c) => c.put(request, copy));
+            }
+            return response;
+          })
+      )
+    );
+    return;
+  }
+
+  // Other same-origin static files (icons, avatars, images): stale-while-revalidate.
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-
-      return fetch(request).then((response) => {
-        if (response.ok && response.type !== "opaque") {
-          const copy = response.clone();
-
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
-        }
-
-        return response;
-      });
+      const network = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(ASSET_CACHE).then((c) => c.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+      return cached || network;
     })
   );
 });
