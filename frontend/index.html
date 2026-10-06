@@ -2,10 +2,59 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>campusquest</title>
+
+    <!-- Basic -->
+    <meta
+      name="description"
+      content="CampusQuest — a campus territory game where Red and Blue compete to capture portals, solve riddles, and earn XP."
+    />
+    <meta name="theme-color" content="#0f172a" />
+
+    <!-- Viewport -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Apple / iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta
+      name="apple-mobile-web-app-title"
+      content="CampusQuest"
+    />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- Open Graph / link sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CampusQuest" />
+    <meta
+      property="og:description"
+      content="Choose your faction. Solve riddles. Capture portals. Dominate the campus."
+    />
+    <meta property="og:image" content="/favicon.png" />
+    <meta property="og:url" content="https://campus-quest-five.vercel.app/" />
+    <meta property="og:site_name" content="CampusQuest" />
+
+
+    <link rel="canonical" href="https://campus-quest-five.vercel.app/" />
+    <script
+      async
+      src="https://cdn.jsdelivr.net/gh/ryxxn/pwa-install-prompt@main/index.js"
+    ></script>
+
+    <title>CampusQuest</title>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
