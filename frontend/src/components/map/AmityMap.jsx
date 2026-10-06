@@ -90,6 +90,8 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
   onSelectPortalRef.current = onSelectPortal;
   const markerEls = useRef(new Map());
   const portalMarkersRef = useRef(new Map());
+  const portalLinksSvgRef = useRef(null);
+  const portalLinkPathsRef = useRef(new Map());
 
   const compassEnabledRef = useRef(false);
   const headingRef = useRef(null);
@@ -99,6 +101,7 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
   const [status, setStatus] = useState("Loading map...");
   const [compassEnabled, setCompassEnabled] = useState(false);
   const [heading, setHeading] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const isMobileDevice = () => {
     if (typeof window === "undefined") return false;
@@ -286,7 +289,12 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
       // Give the globe a moment to render, then fly in.
       setTimeout(() => {
         // Reveal the markers once the fly-in finishes.
-        map.once("moveend", showCampusMarkers);
+        map.once("moveend", () => {
+          showCampusMarkers();
+          // Do not render the portal network until the initial camera animation
+          // has completely settled.
+          setMapReady(true);
+        });
 
         map.flyTo({
           center: target,
@@ -420,55 +428,251 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
       markerEls.current.clear();
       portalMarkersRef.current.forEach((marker) => marker.remove());
       portalMarkersRef.current.clear();
+      portalLinkPathsRef.current.forEach((elements) => elements.forEach((el) => el.remove()));
+      portalLinkPathsRef.current.clear();
+      portalLinksSvgRef.current?.remove();
+      portalLinksSvgRef.current = null;
+      document.getElementById("cq-map-effects")?.remove();
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Render backend event portals independently from the existing riddle/location markers.
+  // Render backend event portals as polished neon nodes and connect them with animated links.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
 
-    const current = portalMarkersRef.current;
-    const nextIds = new Set(portals.map((portal) => String(portal.id)));
+    const ownerColors = {
+      red: "#ff3b3b",
+      blue: "#3b82f6",
+      neutral: "#a5afc2",
+    };
 
-    for (const [id, marker] of current) {
-      if (!nextIds.has(id)) {
-        marker.remove();
+    // Keep the portal network behind the markers but above the satellite imagery.
+    if (!portalLinksSvgRef.current) {
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("class", "cq-portal-links pointer-events-none absolute inset-0 h-full w-full overflow-visible");
+      svg.style.pointerEvents = "none";
+
+      const defs = document.createElementNS(NS, "defs");
+      svg.appendChild(defs);
+      map.getCanvasContainer().appendChild(svg);
+      portalLinksSvgRef.current = svg;
+    }
+
+    const svg = portalLinksSvgRef.current;
+    const NS = "http://www.w3.org/2000/svg";
+    const current = portalLinkPathsRef.current;
+
+    // Build a clean loop by sorting portals by angle around their centroid.
+    // This gives a non-self-crossing ring instead of zig-zag lines across the map.
+    const cx = portals.reduce((sum, p) => sum + p.longitude, 0) / (portals.length || 1);
+    const cy = portals.reduce((sum, p) => sum + p.latitude, 0) / (portals.length || 1);
+    const ordered = [...portals].sort(
+      (a, b) =>
+        Math.atan2(a.latitude - cy, a.longitude - cx) -
+        Math.atan2(b.latitude - cy, b.longitude - cx),
+    );
+
+    const links = ordered.length > 2
+      ? ordered.map((portal, index) => [portal, ordered[(index + 1) % ordered.length]])
+      : [];
+
+    const linkIds = new Set(links.map(([a, b]) => `${a.id}-${b.id}`));
+
+    for (const [id, elements] of current) {
+      if (!linkIds.has(id)) {
+        elements.forEach((el) => el.remove());
         current.delete(id);
       }
     }
 
-    const ownerColors = { red: "#ff3b3b", blue: "#3b82f6", neutral: "#9ca3af" };
+    const drawLinks = () => {
+      const width = map.getContainer().clientWidth;
+      const height = map.getContainer().clientHeight;
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+      links.forEach(([a, b]) => {
+        const id = `${a.id}-${b.id}`;
+        let elements = current.get(id);
+
+        const start = map.project([a.longitude, a.latitude]);
+        const end = map.project([b.longitude, b.latitude]);
+        const fromColor = ownerColors[a.owner] || ownerColors.neutral;
+        const toColor = ownerColors[b.owner] || ownerColors.neutral;
+
+        if (!elements) {
+          const glow = document.createElementNS(NS, "line");
+          const core = document.createElementNS(NS, "line");
+          const pulse = document.createElementNS(NS, "line");
+
+          glow.setAttribute("stroke-width", "8");
+          glow.setAttribute("stroke-linecap", "round");
+          glow.setAttribute("stroke-opacity", "0.16");
+          glow.setAttribute("filter", "url(#cq-link-glow)");
+
+          core.setAttribute("stroke-width", "1.5");
+          core.setAttribute("stroke-linecap", "round");
+          core.setAttribute("stroke-opacity", "0.7");
+
+          pulse.setAttribute("stroke", "#ffffff");
+          pulse.setAttribute("stroke-width", "2.5");
+          pulse.setAttribute("stroke-linecap", "round");
+          pulse.setAttribute("stroke-dasharray", "1 38");
+          pulse.setAttribute("stroke-opacity", "0.9");
+          pulse.style.animation = "cq-link-flow 2.8s linear infinite";
+
+          svg.append(glow, core, pulse);
+          elements = [glow, core, pulse];
+          current.set(id, elements);
+        }
+
+        elements.forEach((line) => {
+          line.setAttribute("x1", start.x);
+          line.setAttribute("y1", start.y);
+          line.setAttribute("x2", end.x);
+          line.setAttribute("y2", end.y);
+        });
+
+        const glow = elements[0];
+        const core = elements[1];
+        glow.setAttribute("stroke", fromColor);
+        core.setAttribute("stroke", toColor === fromColor ? fromColor : fromColor);
+        core.style.stroke = `url(#cq-gradient-${id})`;
+
+        let gradient = document.getElementById(`cq-gradient-${id}`);
+        if (!gradient) {
+          const defs = svg.querySelector("defs");
+          gradient = document.createElementNS(NS, "linearGradient");
+          gradient.id = `cq-gradient-${id}`;
+          gradient.setAttribute("gradientUnits", "userSpaceOnUse");
+          defs.appendChild(gradient);
+        }
+        gradient.setAttribute("x1", start.x);
+        gradient.setAttribute("y1", start.y);
+        gradient.setAttribute("x2", end.x);
+        gradient.setAttribute("y2", end.y);
+        gradient.innerHTML = `<stop offset="0%" stop-color="${fromColor}"/><stop offset="100%" stop-color="${toColor}"/>`;
+      });
+    };
+
+    if (!document.getElementById("cq-map-effects")) {
+      const style = document.createElement("style");
+      style.id = "cq-map-effects";
+      style.textContent = `
+        @keyframes cq-link-flow {
+          from { stroke-dashoffset: 0; opacity: .15; }
+          50% { opacity: .95; }
+          to { stroke-dashoffset: -39; opacity: .15; }
+        }
+        @keyframes cq-portal-pulse {
+          0%, 100% { transform: scale(1); opacity: .45; }
+          50% { transform: scale(1.16); opacity: .08; }
+        }
+        @keyframes cq-portal-core {
+          0%, 100% { box-shadow: 0 0 10px currentColor, 0 0 22px currentColor; }
+          50% { box-shadow: 0 0 16px currentColor, 0 0 34px currentColor; }
+        }
+        .cq-portal-node { position: relative; width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.42); background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.16), rgba(8,11,20,.96) 58%); color: #9ca3af; box-shadow: 0 0 12px currentColor, inset 0 0 10px rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; transition: transform .18s ease, filter .18s ease; }
+        .cq-portal-node::before { content: ''; position: absolute; inset: -7px; border: 1px solid currentColor; border-radius: 50%; opacity: .25; animation: cq-portal-pulse 2.2s ease-in-out infinite; }
+        .cq-portal-node::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; border: 1px solid currentColor; opacity: .35; animation: cq-portal-core 2.2s ease-in-out infinite; }
+        .cq-portal-node:hover { transform: scale(1.12); filter: brightness(1.25); }
+        .cq-portal-node svg { position: relative; z-index: 2; width: 19px; height: 19px; filter: drop-shadow(0 0 5px currentColor); }
+        .cq-portal-node .cq-portal-count { position: absolute; right: -5px; bottom: -4px; z-index: 3; min-width: 16px; height: 16px; padding: 0 4px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; background: #080b14; color: white; font: 700 9px/14px sans-serif; text-align: center; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Depth-sort markers by screen Y so lower (nearer) markers sit on top of
+    // higher ones, with all portals above all location markers.
+    const updateDepth = () => {
+      LOCATIONS.forEach((loc) => {
+        const el = markerEls.current.get(loc.id);
+        if (!el) return;
+        const y = Math.max(0, Math.round(map.project([loc.lng, loc.lat]).y));
+      });
+      portalMarkersRef.current.forEach((m) => {
+        const y = Math.max(0, Math.round(map.project(m.getLngLat()).y));
+      });
+    };
+    const onRender = () => {
+      drawLinks();
+      updateDepth();
+    };
+
+    const markerCurrent = portalMarkersRef.current;
+    const nextIds = new Set(portals.map((portal) => String(portal.id)));
+
+    for (const [id, marker] of markerCurrent) {
+      if (!nextIds.has(id)) {
+        marker.remove();
+        markerCurrent.delete(id);
+      }
+    }
+
+    // Portals with identical coordinates would stack exactly; fan them out by pixels.
+    const groups = new Map();
+    portals.forEach((p) => {
+      const k = `${p.latitude.toFixed(5)}:${p.longitude.toFixed(5)}`;
+      groups.set(k, [...(groups.get(k) || []), p.id]);
+    });
+    const offsetFor = (p) => {
+      const ids = groups.get(`${p.latitude.toFixed(5)}:${p.longitude.toFixed(5)}`);
+      if (ids.length < 2) return [0, 0];
+      const i = ids.indexOf(p.id);
+      const a = (i / ids.length) * Math.PI * 2;
+      return [Math.cos(a) * 26, Math.sin(a) * 26];
+    };
 
     portals.forEach((portal) => {
       const id = String(portal.id);
-      let marker = current.get(id);
+      let marker = markerCurrent.get(id);
       const color = ownerColors[portal.owner] || ownerColors.neutral;
+      const total = portal.resonators?.total ?? 0;
 
       if (!marker) {
+        // MapLibre owns the position/transform of the marker element, so the
+        // styled node must be a CHILD of a bare wrapper. Styling the marker
+        // element itself (position: relative, transform on hover/transition)
+        // breaks its absolute positioning.
+        const wrapper = document.createElement("div");
         const el = document.createElement("button");
         el.type = "button";
-        el.className = "flex h-9 w-9 items-center justify-center rounded-full border-2 bg-[#0b0d16] shadow-lg transition-transform active:scale-90";
+        el.className = "cq-portal-node";
         el.setAttribute("aria-label", portal.name);
-        el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS.tower}</svg>`;
+        wrapper.appendChild(el);
+        el.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            ${ICONS.tower}
+          </svg>
+          <span class="cq-portal-count">${total}/3</span>
+        `;
         el.addEventListener("click", () => onSelectPortalRef.current?.(portal));
-        marker = new Marker({ element: el, anchor: "center" }).setLngLat([portal.longitude, portal.latitude]).addTo(map);
-        current.set(id, marker);
+        marker = new Marker({ element: wrapper, anchor: "center", offset: offsetFor(portal) })
+          .setLngLat([portal.longitude, portal.latitude])
+          .addTo(map);
+        markerCurrent.set(id, marker);
       } else {
         marker.setLngLat([portal.longitude, portal.latitude]);
+        const count = marker.getElement().querySelector(".cq-portal-count");
+        if (count) count.textContent = `${total}/3`;
       }
 
-      const el = marker.getElement();
+      const el = marker.getElement().querySelector(".cq-portal-node");
       el.style.color = color;
-      el.style.borderColor = color;
-      el.style.boxShadow = `0 0 14px ${color}66`;
-      el.title = `${portal.name} · ${portal.resonators?.total ?? 0}/3`;
+      el.style.borderColor = `${color}99`;
+      el.title = `${portal.name} · ${total}/3 resonators`;
     });
 
-    return () => {};
-  }, [portals]);
+    onRender();
+    map.on("render", onRender);
+
+    return () => {
+      map.off("render", onRender);
+    };
+  }, [portals, mapReady]);
 
   // Tint markers whose riddle is solved.
   const solvedKey = solvedIds.join(",");

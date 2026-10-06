@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import Icon from "../ui/Icon.jsx";
 import ScreenHeader from "../ui/ScreenHeader.jsx";
 import { GREEN } from "../../theme.js";
-import { ALLOWED_RANGE, MIN_SIMILARITY, checkImage, checkLocation } from "./verify.js";
+import { ALLOWED_RANGE, checkLocation } from "./verify.js";
+import { verifyPortal } from "../../api/capture.js";
 
-function StatusRow({ icon, color, title, sub, done }) {
+function StatusRow({ icon, color, title, sub, done, failed }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
       <span className="grid h-11 w-11 place-items-center rounded-lg" style={{ background: `${color}22`, color }}><Icon name={icon} size={22} /></span>
@@ -12,11 +13,7 @@ function StatusRow({ icon, color, title, sub, done }) {
         <span className="block text-sm font-semibold">{title}</span>
         <span className="block text-xs text-mute">{sub}</span>
       </span>
-      {done ? (
-        <Icon name="check" size={22} style={{ color: GREEN }} />
-      ) : (
-        <span className="h-6 w-6 animate-spin rounded-full border-2" style={{ borderColor: color, borderTopColor: "transparent" }} aria-label="In progress" />
-      )}
+      {failed ? <Icon name="x" size={22} style={{ color }} /> : done ? <Icon name="check" size={22} style={{ color: GREEN }} /> : <span className="h-6 w-6 animate-spin rounded-full border-2" style={{ borderColor: color, borderTopColor: "transparent" }} />}
     </div>
   );
 }
@@ -42,38 +39,84 @@ function Radar({ distance, accent }) {
 
 export default function Verifying({ portal, photo, accent, onBack, onDone }) {
   const [loc, setLoc] = useState(null);
-  const [img, setImg] = useState(null);
+  const [status, setStatus] = useState("starting");
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
-      const [l, i] = await Promise.all([
-        checkLocation(portal).then((r) => { if (!cancelled) setLoc(r); return r; }),
-        checkImage(photo, portal).then((r) => { if (!cancelled) setImg(r); return r; }),
-      ]);
-      if (cancelled) return;
-      await new Promise((r) => setTimeout(r, 700));
-      if (cancelled) return;
-      const locationOk = l.distance != null && l.distance <= ALLOWED_RANGE;
-      const imageOk = i.similarity >= MIN_SIMILARITY;
-      onDone({ distance: l.distance, similarity: i.similarity, locationOk, imageOk, locationError: Boolean(l.error), ok: locationOk && imageOk });
+      try {
+        const location = await checkLocation(portal);
+        if (cancelled) return;
+        setLoc(location);
+
+        if (location.error || location.latitude == null || location.longitude == null) {
+          setStatus("failed");
+          setError(location.message || "Unable to read your location");
+          return;
+        }
+
+        setStatus("verifying");
+        const result = await verifyPortal(portal.id, {
+          photo,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        });
+        if (cancelled) return;
+
+        setStatus("done");
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        if (cancelled) return;
+
+        onDone({
+          ok: result.passed,
+          verification_id: result.verification_id,
+          distance: result.location?.distance_m ?? location.distance,
+          similarity: result.image?.similarity ?? 0,
+          locationOk: Boolean(result.location?.ok),
+          imageOk: Boolean(result.image?.ok),
+          locationError: false,
+          message: result.message,
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setStatus("failed");
+        setError(err?.message || "Verification failed");
+      }
     })();
+
     return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [photo, portal.id, onDone]);
 
   const near = loc?.distance != null && loc.distance <= ALLOWED_RANGE;
+  const verifying = status === "starting" || status === "verifying";
 
   return (
     <div className="flex h-full flex-col">
-      <ScreenHeader title="Verifying Portal" subtitle="Our systems are analyzing your submission..." onBack={onBack} />
+      <ScreenHeader title="Verifying Portal" subtitle="Checking your device location and portal submission..." onBack={onBack} />
       <div className="flex-1 overflow-y-auto px-4 pb-8">
         <div className="mx-auto mt-3 h-[190px] w-[160px] overflow-hidden rounded-lg border-2" style={{ borderColor: accent, boxShadow: `0 0 22px ${accent}66` }}>
           <img src={photo} alt="Your captured photo" className="h-full w-full object-cover" />
         </div>
 
         <div className="mt-6 space-y-2.5">
-          <StatusRow icon="pin" color={GREEN} title="Checking location..." sub="Verifying your current coordinates" done={Boolean(loc)} />
-          <StatusRow icon="image" color={accent} title="Analyzing image..." sub="Comparing with portal data" done={Boolean(img)} />
+          <StatusRow
+            icon="pin"
+            color={GREEN}
+            title="Checking location..."
+            sub={loc?.accuracy ? `GPS accuracy ±${Math.round(loc.accuracy)} m` : "Reading your current coordinates"}
+            done={Boolean(loc?.latitude)}
+            failed={Boolean(loc?.error)}
+          />
+          <StatusRow
+            icon="image"
+            color={accent}
+            title="Submitting capture..."
+            sub={verifying ? "Sending the photo and GPS coordinates to the backend" : status === "done" ? "Backend verification complete" : error || "Waiting for GPS"}
+            done={status === "done"}
+            failed={status === "failed"}
+          />
         </div>
 
         <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
@@ -91,6 +134,8 @@ export default function Verifying({ portal, photo, accent, onBack, onDone }) {
             </div>
           </div>
         </div>
+
+        {!verifying && status === "failed" && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
       </div>
     </div>
   );

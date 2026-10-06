@@ -10,31 +10,53 @@ function haversine(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/**
- * Real GPS check when the portal has `coords: { lat, lng }`.
- * Without coords it's simulated (12 m) so you can test the flow.
- */
-export async function checkLocation(portal) {
-  if (!portal.coords) {
-    await sleep(1400);
-    return { distance: 12, simulated: true };
+function portalCoordinates(portal) {
+  if (portal?.coords?.lat != null && portal?.coords?.lng != null) return portal.coords;
+  if (portal?.latitude != null && portal?.longitude != null) {
+    return { lat: Number(portal.latitude), lng: Number(portal.longitude) };
   }
+  return null;
+}
+
+/** Reads the device GPS and returns the coordinates plus local distance estimate. */
+export async function checkLocation(portal) {
+  const target = portalCoordinates(portal);
+  if (!target) return { distance: null, error: true, message: "Portal coordinates are unavailable" };
+  if (!navigator.geolocation) return { distance: null, error: true, message: "Geolocation is not supported" };
+
   try {
     const pos = await new Promise((res, rej) =>
-      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 })
+      navigator.geolocation.getCurrentPosition(res, rej, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      })
     );
-    const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    return { distance: Math.round(haversine(here, portal.coords)) };
-  } catch {
-    return { distance: null, error: true };
+
+    const coords = {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+    };
+
+    return {
+      ...coords,
+      distance: Math.round(haversine(
+        { lat: coords.latitude, lng: coords.longitude },
+        target,
+      )),
+    };
+  } catch (error) {
+    return {
+      distance: null,
+      error: true,
+      message: error?.message || "Unable to read device location",
+    };
   }
 }
 
-/**
- * SIMULATED. Comparing a photo to the reference image needs a backend
- * (e.g. a Cloud Function with an image-embedding model). Replace this with that call.
- */
-export async function checkImage(photo, portal) { // eslint-disable-line no-unused-vars
-  await sleep(2200);
-  return { similarity: 72, simulated: true };
+/** Kept for compatibility with the existing verification UI. AI matching is handled by the backend. */
+export async function checkImage() {
+  await sleep(300);
+  return { pending: true };
 }

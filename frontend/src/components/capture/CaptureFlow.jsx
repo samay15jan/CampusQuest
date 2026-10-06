@@ -5,12 +5,8 @@ import Verifying from "./Verifying.jsx";
 import VerificationResult from "./VerificationResult.jsx";
 import DeployResonator from "./DeployResonator.jsx";
 
-/**
- * Full-screen capture flow:
- * brief -> camera -> verifying -> result -> deploy
- * Each step is mounted only while active, so the camera stream is released as soon as you leave it.
- */
-export default function CaptureFlow({ portal, accent, startAt = "brief", onClose, onComplete }) {
+/** Full-screen capture flow: brief -> camera -> backend verification -> deploy. */
+export default function CaptureFlow({ portal, accent, availableResonators = 0, startAt = "brief", onClose, onComplete }) {
   const [step, setStep] = useState(startAt);
   const [photo, setPhoto] = useState(null);
   const [result, setResult] = useState(null);
@@ -28,15 +24,24 @@ export default function CaptureFlow({ portal, accent, startAt = "brief", onClose
       )}
       {step === "result" && (
         <VerificationResult
-          portal={portal} photo={photo} result={result} accent={accent}
-          onBack={() => setStep("camera")} onRetake={() => setStep("camera")} onDeploy={() => setStep("deploy")}
+          portal={portal}
+          photo={photo}
+          result={result}
+          accent={accent}
+          onBack={() => setStep("camera")}
+          onRetake={() => setStep("camera")}
+          onDeploy={() => setStep("deploy")}
         />
       )}
       {step === "deploy" && (
         <DeployResonator
-          portal={portal} photo={photo} accent={accent}
+          portal={portal}
+          photo={photo}
+          accent={accent}
+          availableResonators={availableResonators}
+          verification={result}
           onBack={() => setStep("result")}
-          onConfirm={(resonator) => onComplete({ portalId: portal.id, photo, resonator, verification: result })}
+          onConfirm={(deployment) => onComplete({ portalId: portal.id, photo, resonator: deployment.resonator, verification: result, deployment })}
         />
       )}
     </div>

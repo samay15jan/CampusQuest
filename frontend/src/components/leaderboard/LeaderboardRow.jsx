@@ -5,7 +5,7 @@ import { OWNERS } from "../../theme.js";
 const PODIUM_TINT = { 1: "#ffb020", 2: "#94a3b8", 3: "#ff7a1a" };
 
 export default function LeaderboardRow({ player, isMe }) {
-  const teamColor = OWNERS[player.team].color;
+  const teamColor = OWNERS[player.faction]?.color || "#64748b";
   const tint = PODIUM_TINT[player.rank];
 
   let style = {};
@@ -20,11 +20,11 @@ export default function LeaderboardRow({ player, isMe }) {
     >
       <span className="flex justify-center"><RankBadge rank={player.rank} /></span>
       <span className="flex min-w-0 items-center gap-3">
-        <Avatar name={player.name} size={36} ring={teamColor} />
-        <span className="truncate text-[15px] font-medium">{player.name}</span>
+        <Avatar name={player.username} size={36} ring={teamColor} />
+        <span className="min-w-0 truncate text-[15px] font-medium">{player.username}</span>
       </span>
-      <span className="text-center text-sm text-slate-300">{player.lvl}</span>
-      <span className="text-right text-sm font-semibold">{player.pts.toLocaleString()}</span>
+      <span className="text-center text-sm text-slate-300">{player.level}</span>
+      <span className="text-right text-sm font-semibold">{Number(player.points).toLocaleString()}</span>
     </li>
   );
 }

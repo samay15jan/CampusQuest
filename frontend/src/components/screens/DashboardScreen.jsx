@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 
 import AmityMap from "../map/AmityMap.jsx";
 import ScoreBar from "../dashboard/ScoreBar.jsx";
-import CurrentPortal from "../dashboard/CurrentPortal.jsx";
 import BottomNav from "../dashboard/BottomNav.jsx";
 import IntelPanel from "../intel/IntelPanel.jsx";
 import PortalDetail from "../intel/PortalDetail.jsx";
@@ -17,6 +16,7 @@ import LeaderboardScreen from "../leaderboard/LeaderboardScreen.jsx";
 import { teamAccent } from "../../theme.js";
 import { getCurrentEvent } from "../../api/event.js";
 import { getPortal, getPortals } from "../../api/portals.js";
+import { getActivity, getHeatmap } from "../../api/intel.js";
 
 export default function DashboardScreen() {
   const location = useLocation();
@@ -47,21 +47,27 @@ export default function DashboardScreen() {
 
   const [event, setEvent] = useState(null);
   const [portals, setPortals] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [heatmap, setHeatmap] = useState([]);
 
   useEffect(() => {
     let mounted = true;
 
     const loadGameState = async () => {
       try {
-        const [eventData, portalData] = await Promise.all([
+        const [eventData, portalData, activityData, heatmapData] = await Promise.all([
           getCurrentEvent(),
           getPortals(),
+          getActivity(20),
+          getHeatmap(24),
         ]);
 
         if (!mounted) return;
 
         setEvent(eventData);
         setPortals(portalData);
+        setActivity(activityData);
+        setHeatmap(heatmapData);
       } catch (error) {
         console.error("Failed to load game state", error);
       }
@@ -100,6 +106,7 @@ export default function DashboardScreen() {
       <div className="absolute inset-0">
         <AmityMap
           portals={portals}
+          heatmap={heatmap}
           onSelectPortal={openPortal}
           onSelectLocation={setRiddleLoc}
           solvedIds={solvedIds}
@@ -133,18 +140,11 @@ export default function DashboardScreen() {
         </button>
       )}
 
-      {/* Current portal */}
-      {view === "map" && portals[0] && (
-        <CurrentPortal
-          portal={portals[0]}
-          onClick={() => openPortal(portals[0])}
-        />
-      )}
-
       {/* Intel */}
       {view === "intel" && (
         <IntelPanel
           portals={portals}
+          activity={activity}
           onSelect={openPortal}
           accent={accent}
           layers={layers}
