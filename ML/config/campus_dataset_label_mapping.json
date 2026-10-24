@@ -1,0 +1,17 @@
+{
+  "aliases": {
+    "central_library": "Library",
+    "megabite": "Megabyte",
+    "raras": "Raras Foodtruck"
+  },
+  "unmapped_classes_kept_as_new_territories": [
+    "e2_block",
+    "e3_block",
+    "f2_block",
+    "i2_block",
+    "j3_block",
+    "k2_block",
+    "wall_street"
+  ],
+  "note": "Only clear equivalents were merged. All other source class names are retained as separate territory labels; confirm backend territory IDs before integration."
+}

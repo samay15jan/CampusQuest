@@ -1,0 +1,16 @@
+path,label,source_class,split,original_name
+evaluation/campus_dataset/images/Library/CampusDataset_central_library_central_library_004.jpg,Library,central_library,val,1000078899.jpg
+evaluation/campus_dataset/images/e2_block/CampusDataset_e2_block_e2_block_006.jpg,e2_block,e2_block,val,1000078939.jpg
+evaluation/campus_dataset/images/e2_block/CampusDataset_e2_block_e2_block_008.jpg,e2_block,e2_block,val,1000078941.jpg
+evaluation/campus_dataset/images/e3_block/CampusDataset_e3_block_e3_block_002.jpg,e3_block,e3_block,val,1000078950.jpg
+evaluation/campus_dataset/images/f2_block/CampusDataset_f2_block_f2_block_003.jpg,f2_block,f2_block,val,1000078963.jpg
+evaluation/campus_dataset/images/f2_block/CampusDataset_f2_block_f2_block_006.jpg,f2_block,f2_block,val,1000078966.jpg
+evaluation/campus_dataset/images/i2_block/CampusDataset_i2_block_i2_block_003.jpg,i2_block,i2_block,val,1000078955.jpg
+evaluation/campus_dataset/images/i2_block/CampusDataset_i2_block_i2_block_006.jpg,i2_block,i2_block,val,1000078958.jpg
+evaluation/campus_dataset/images/j3_block/CampusDataset_j3_block_j3_block_003.jpg,j3_block,j3_block,val,1000078917.jpg
+evaluation/campus_dataset/images/k2_block/CampusDataset_k2_block_k2_block_006.jpg,k2_block,k2_block,val,1000078928.jpg
+evaluation/campus_dataset/images/k2_block/CampusDataset_k2_block_k2_block_008.jpg,k2_block,k2_block,val,1000078930.jpg
+evaluation/campus_dataset/images/Megabyte/CampusDataset_megabite_megabite_002.jpg,Megabyte,megabite,val,1000078887.jpg
+evaluation/campus_dataset/images/Megabyte/CampusDataset_megabite_megabite_007.jpg,Megabyte,megabite,val,1000078892.jpg
+evaluation/campus_dataset/images/Raras Foodtruck/CampusDataset_raras_raras_002.jpg,Raras Foodtruck,raras,val,1000078920.jpg
+evaluation/campus_dataset/images/wall_street/CampusDataset_wall_street_wall_street_002.jpg,wall_street,wall_street,val,1000078946.jpg

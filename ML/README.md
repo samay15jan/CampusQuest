@@ -10,7 +10,9 @@ The game backend must remain authoritative. Only call the service after the game
 
 ## What the supplied dataset contains
 
-The reference set has 26 photos in 8 populated folders: H Block Centre (5), Helipad (5), Gate 2A (4), Library (3), Bank (3), Megabyte (2), Raras Foodtruck (2), and Sports Complex Room (2). The other territory folders and `_other` are empty. No missing class or negative example is invented.
+The original set has 26 photos in 8 populated folders: H Block Centre (5), Helipad (5), Gate 2A (4), Library (3), Bank (3), Megabyte (2), Raras Foodtruck (2), and Sports Complex Room (2). A second supplied dataset adds 53 training photos across 10 source labels. Its 15 validation photos are stored separately under `evaluation/campus_dataset/` and are never included in the reference gallery.
+
+Only clear name matches were merged: `central_library` into `Library`, `megabite` into `Megabyte`, and `raras` into `Raras Foodtruck`. The remaining source labels (`e2_block`, `e3_block`, `f2_block`, `i2_block`, `j3_block`, `k2_block`, and `wall_street`) stay as separate gallery labels. The mapping is recorded in `config/campus_dataset_label_mapping.json`. Before backend integration, the backend owner must confirm that those seven names correspond to real game territories and map them to the backend's territory IDs; the ML service returns labels and cannot create game territories by itself.
 
 Three visibly problematic reference photos are excluded by default in `config/gallery_exclude.txt`:
 
@@ -18,7 +20,7 @@ Three visibly problematic reference photos are excluded by default in `config/ga
 - `Bank/Bank_02.jpg` shows HDFC Bank, while the other two Bank photos show Indian Bank.
 - `Helipad/Helipad_05.jpg` is a text-bearing aerial/screenshot-like image unlike the other references.
 
-That leaves 23 references. The quality issues and small counts mean this is a prototype, not a validated recognition product. Similarity and margin are ranking signals, not real-world probabilities. There is no meaningful held-out accuracy estimate: capture sessions are not labelled, each class has only 2–5 photos, and `_other` has zero examples. Collect 15–20 genuine varied phone photos per territory over at least two sessions and keep a future session entirely out of gallery building. Collect 30+ varied campus-negative examples for `_other`; even that will not cover every unknown location.
+After the three existing exclusions, the gallery starts with 23 original references and adds 53 training references (76 total). The new dataset's validation split has only 15 images, so its results are useful for spotting obvious problems but are not a reliable accuracy estimate for every territory. The old labels have no held-out validation photos, and `_other` still has no examples. Similarity and margin are ranking signals, not real-world probabilities. For a stronger evaluation, collect varied phone photos across separate capture sessions, keep entire sessions out of the gallery, and collect campus-negative images for `_other`.
 
 The ZIP includes these provided campus reference photos because they are required to generate a working gallery. Review and replace them if they should not be distributed. Do not upload personal/identifying images. Generated gallery embeddings are kept in a Docker volume and are not included in the ZIP.
 
@@ -102,9 +104,19 @@ When the backend runs in a separate container, attach it and this service to a s
 
 No Fastify route, Firebase Authentication middleware, GPS validation, territory API, or PostgreSQL migration is included, because none of those source files or contracts were available. The adapter has not been connected to or tested against your real game. Provide the backend project to implement and verify that final integration without guessing its game rules.
 
+## Evaluate the added dataset
+
+The `evaluation/campus_dataset/labels.csv` file points to the 15 held-out validation photos. They are deliberately outside `photos/`; do not copy them into the gallery. After starting the Docker service and building the updated gallery, run:
+
+```powershell
+docker compose run --rm --entrypoint python campusquest-recognition -m ml.evaluate_gallery --gallery /data/gallery.npz
+```
+
+The report shows top-1 and top-3 results, rejection coverage at the configured thresholds, and the mean similarity score. A similarity such as `0.60` is not 60% accuracy or a 60% probability. Do not lower the rejection threshold just to raise that score; evaluate false accepts and missed matches on more independent photos first.
+
 ## Gallery updates
 
-Add genuine photos to `photos/<Exact Territory Name>/`, clean the source labels, then rebuild the gallery. Empty directories do not create model classes. Review the exclusion manifest before changing it. Pretrained EfficientNetV2B0 is frozen; gallery updates do not retrain a neural network. The build script downloads ImageNet weights if they are not already cached and outputs `gallery.npz` plus a manifest. Do not mix photos from different buildings in one label.
+Add genuine photos to `photos/<Exact Territory Name>/`, clean the source labels, then rebuild the gallery. Empty directories do not create model classes. Review the exclusion manifest before changing it. Pretrained EfficientNetV2B0 remains frozen; the added photos expand the reference gallery, they do not fine-tune model weights. The build script downloads ImageNet weights if they are not already cached and outputs `gallery.npz` plus a manifest. Do not mix photos from different buildings in one label.
 
 ## Tests
 

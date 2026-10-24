@@ -1,0 +1,485 @@
+{
+  "source_image_count": 68,
+  "gallery_train_count": 53,
+  "held_out_validation_count": 15,
+  "train_images": [
+    {
+      "source_class": "central_library",
+      "gallery_label": "Library",
+      "source_path": "images/central_library/central_library_001.jpg",
+      "gallery_path": "photos/Library/CampusDataset_central_library_central_library_001.jpg",
+      "original_name": "1000078896.jpg"
+    },
+    {
+      "source_class": "central_library",
+      "gallery_label": "Library",
+      "source_path": "images/central_library/central_library_002.jpg",
+      "gallery_path": "photos/Library/CampusDataset_central_library_central_library_002.jpg",
+      "original_name": "1000078897.jpg"
+    },
+    {
+      "source_class": "central_library",
+      "gallery_label": "Library",
+      "source_path": "images/central_library/central_library_003.jpg",
+      "gallery_path": "photos/Library/CampusDataset_central_library_central_library_003.jpg",
+      "original_name": "1000078898.jpg"
+    },
+    {
+      "source_class": "central_library",
+      "gallery_label": "Library",
+      "source_path": "images/central_library/central_library_005.jpg",
+      "gallery_path": "photos/Library/CampusDataset_central_library_central_library_005.jpg",
+      "original_name": "1000078900.jpg"
+    },
+    {
+      "source_class": "central_library",
+      "gallery_label": "Library",
+      "source_path": "images/central_library/central_library_006.jpg",
+      "gallery_path": "photos/Library/CampusDataset_central_library_central_library_006.jpg",
+      "original_name": "1000078901.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "gallery_label": "e2_block",
+      "source_path": "images/e2_block/e2_block_001.jpg",
+      "gallery_path": "photos/e2_block/CampusDataset_e2_block_e2_block_001.jpg",
+      "original_name": "1000078934.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "gallery_label": "e2_block",
+      "source_path": "images/e2_block/e2_block_002.jpg",
+      "gallery_path": "photos/e2_block/CampusDataset_e2_block_e2_block_002.jpg",
+      "original_name": "1000078935.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "gallery_label": "e2_block",
+      "source_path": "images/e2_block/e2_block_003.jpg",
+      "gallery_path": "photos/e2_block/CampusDataset_e2_block_e2_block_003.jpg",
+      "original_name": "1000078936.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "gallery_label": "e2_block",
+      "source_path": "images/e2_block/e2_block_004.jpg",
+      "gallery_path": "photos/e2_block/CampusDataset_e2_block_e2_block_004.jpg",
+      "original_name": "1000078937.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "gallery_label": "e2_block",
+      "source_path": "images/e2_block/e2_block_005.jpg",
+      "gallery_path": "photos/e2_block/CampusDataset_e2_block_e2_block_005.jpg",
+      "original_name": "1000078938.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "gallery_label": "e2_block",
+      "source_path": "images/e2_block/e2_block_007.jpg",
+      "gallery_path": "photos/e2_block/CampusDataset_e2_block_e2_block_007.jpg",
+      "original_name": "1000078940.jpg"
+    },
+    {
+      "source_class": "e3_block",
+      "gallery_label": "e3_block",
+      "source_path": "images/e3_block/e3_block_001.jpg",
+      "gallery_path": "photos/e3_block/CampusDataset_e3_block_e3_block_001.jpg",
+      "original_name": "1000078949.jpg"
+    },
+    {
+      "source_class": "e3_block",
+      "gallery_label": "e3_block",
+      "source_path": "images/e3_block/e3_block_003.jpg",
+      "gallery_path": "photos/e3_block/CampusDataset_e3_block_e3_block_003.jpg",
+      "original_name": "1000078951.jpg"
+    },
+    {
+      "source_class": "e3_block",
+      "gallery_label": "e3_block",
+      "source_path": "images/e3_block/e3_block_004.jpg",
+      "gallery_path": "photos/e3_block/CampusDataset_e3_block_e3_block_004.jpg",
+      "original_name": "1000078952.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_001.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_001.jpg",
+      "original_name": "1000078961.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_002.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_002.jpg",
+      "original_name": "1000078962.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_004.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_004.jpg",
+      "original_name": "1000078964.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_005.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_005.jpg",
+      "original_name": "1000078965.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_007.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_007.jpg",
+      "original_name": "1000078967.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_008.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_008.jpg",
+      "original_name": "1000078968.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_009.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_009.jpg",
+      "original_name": "1000078969.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "gallery_label": "f2_block",
+      "source_path": "images/f2_block/f2_block_010.jpg",
+      "gallery_path": "photos/f2_block/CampusDataset_f2_block_f2_block_010.jpg",
+      "original_name": "1000078970.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "gallery_label": "i2_block",
+      "source_path": "images/i2_block/i2_block_001.jpg",
+      "gallery_path": "photos/i2_block/CampusDataset_i2_block_i2_block_001.jpg",
+      "original_name": "1000078953.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "gallery_label": "i2_block",
+      "source_path": "images/i2_block/i2_block_002.jpg",
+      "gallery_path": "photos/i2_block/CampusDataset_i2_block_i2_block_002.jpg",
+      "original_name": "1000078954.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "gallery_label": "i2_block",
+      "source_path": "images/i2_block/i2_block_004.jpg",
+      "gallery_path": "photos/i2_block/CampusDataset_i2_block_i2_block_004.jpg",
+      "original_name": "1000078956.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "gallery_label": "i2_block",
+      "source_path": "images/i2_block/i2_block_005.jpg",
+      "gallery_path": "photos/i2_block/CampusDataset_i2_block_i2_block_005.jpg",
+      "original_name": "1000078957.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "gallery_label": "i2_block",
+      "source_path": "images/i2_block/i2_block_007.jpg",
+      "gallery_path": "photos/i2_block/CampusDataset_i2_block_i2_block_007.jpg",
+      "original_name": "1000078959.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "gallery_label": "i2_block",
+      "source_path": "images/i2_block/i2_block_008.jpg",
+      "gallery_path": "photos/i2_block/CampusDataset_i2_block_i2_block_008.jpg",
+      "original_name": "1000078960.jpg"
+    },
+    {
+      "source_class": "j3_block",
+      "gallery_label": "j3_block",
+      "source_path": "images/j3_block/j3_block_001.jpg",
+      "gallery_path": "photos/j3_block/CampusDataset_j3_block_j3_block_001.jpg",
+      "original_name": "1000078915.jpg"
+    },
+    {
+      "source_class": "j3_block",
+      "gallery_label": "j3_block",
+      "source_path": "images/j3_block/j3_block_002.jpg",
+      "gallery_path": "photos/j3_block/CampusDataset_j3_block_j3_block_002.jpg",
+      "original_name": "1000078916.jpg"
+    },
+    {
+      "source_class": "j3_block",
+      "gallery_label": "j3_block",
+      "source_path": "images/j3_block/j3_block_004.jpg",
+      "gallery_path": "photos/j3_block/CampusDataset_j3_block_j3_block_004.jpg",
+      "original_name": "1000078918.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_001.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_001.jpg",
+      "original_name": "1000078923.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_002.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_002.jpg",
+      "original_name": "1000078924.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_003.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_003.jpg",
+      "original_name": "1000078925.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_004.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_004.jpg",
+      "original_name": "1000078926.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_005.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_005.jpg",
+      "original_name": "1000078927.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_007.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_007.jpg",
+      "original_name": "1000078929.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "gallery_label": "k2_block",
+      "source_path": "images/k2_block/k2_block_009.jpg",
+      "gallery_path": "photos/k2_block/CampusDataset_k2_block_k2_block_009.jpg",
+      "original_name": "1000078931.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_001.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_001.jpg",
+      "original_name": "1000078886.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_003.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_003.jpg",
+      "original_name": "1000078888.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_004.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_004.jpg",
+      "original_name": "1000078889.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_005.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_005.jpg",
+      "original_name": "1000078890.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_006.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_006.jpg",
+      "original_name": "1000078891.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_008.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_008.jpg",
+      "original_name": "1000078893.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "gallery_label": "Megabyte",
+      "source_path": "images/megabite/megabite_009.jpg",
+      "gallery_path": "photos/Megabyte/CampusDataset_megabite_megabite_009.jpg",
+      "original_name": "1000078894.jpg"
+    },
+    {
+      "source_class": "raras",
+      "gallery_label": "Raras Foodtruck",
+      "source_path": "images/raras/raras_001.jpg",
+      "gallery_path": "photos/Raras Foodtruck/CampusDataset_raras_raras_001.jpg",
+      "original_name": "1000078919.jpg"
+    },
+    {
+      "source_class": "raras",
+      "gallery_label": "Raras Foodtruck",
+      "source_path": "images/raras/raras_003.jpg",
+      "gallery_path": "photos/Raras Foodtruck/CampusDataset_raras_raras_003.jpg",
+      "original_name": "1000078921.jpg"
+    },
+    {
+      "source_class": "raras",
+      "gallery_label": "Raras Foodtruck",
+      "source_path": "images/raras/raras_004.jpg",
+      "gallery_path": "photos/Raras Foodtruck/CampusDataset_raras_raras_004.jpg",
+      "original_name": "1000078922.jpg"
+    },
+    {
+      "source_class": "raras",
+      "gallery_label": "Raras Foodtruck",
+      "source_path": "images/raras/raras_005.jpg",
+      "gallery_path": "photos/Raras Foodtruck/CampusDataset_raras_raras_005.jpg",
+      "original_name": "1000078932.jpg"
+    },
+    {
+      "source_class": "raras",
+      "gallery_label": "Raras Foodtruck",
+      "source_path": "images/raras/raras_006.jpg",
+      "gallery_path": "photos/Raras Foodtruck/CampusDataset_raras_raras_006.jpg",
+      "original_name": "1000078933.jpg"
+    },
+    {
+      "source_class": "wall_street",
+      "gallery_label": "wall_street",
+      "source_path": "images/wall_street/wall_street_001.jpg",
+      "gallery_path": "photos/wall_street/CampusDataset_wall_street_wall_street_001.jpg",
+      "original_name": "1000078945.jpg"
+    },
+    {
+      "source_class": "wall_street",
+      "gallery_label": "wall_street",
+      "source_path": "images/wall_street/wall_street_003.jpg",
+      "gallery_path": "photos/wall_street/CampusDataset_wall_street_wall_street_003.jpg",
+      "original_name": "1000078947.jpg"
+    },
+    {
+      "source_class": "wall_street",
+      "gallery_label": "wall_street",
+      "source_path": "images/wall_street/wall_street_004.jpg",
+      "gallery_path": "photos/wall_street/CampusDataset_wall_street_wall_street_004.jpg",
+      "original_name": "1000078948.jpg"
+    }
+  ],
+  "validation_images": [
+    {
+      "source_class": "central_library",
+      "label": "Library",
+      "path": "evaluation/campus_dataset/images/Library/CampusDataset_central_library_central_library_004.jpg",
+      "source_path": "images/central_library/central_library_004.jpg",
+      "original_name": "1000078899.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "label": "e2_block",
+      "path": "evaluation/campus_dataset/images/e2_block/CampusDataset_e2_block_e2_block_006.jpg",
+      "source_path": "images/e2_block/e2_block_006.jpg",
+      "original_name": "1000078939.jpg"
+    },
+    {
+      "source_class": "e2_block",
+      "label": "e2_block",
+      "path": "evaluation/campus_dataset/images/e2_block/CampusDataset_e2_block_e2_block_008.jpg",
+      "source_path": "images/e2_block/e2_block_008.jpg",
+      "original_name": "1000078941.jpg"
+    },
+    {
+      "source_class": "e3_block",
+      "label": "e3_block",
+      "path": "evaluation/campus_dataset/images/e3_block/CampusDataset_e3_block_e3_block_002.jpg",
+      "source_path": "images/e3_block/e3_block_002.jpg",
+      "original_name": "1000078950.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "label": "f2_block",
+      "path": "evaluation/campus_dataset/images/f2_block/CampusDataset_f2_block_f2_block_003.jpg",
+      "source_path": "images/f2_block/f2_block_003.jpg",
+      "original_name": "1000078963.jpg"
+    },
+    {
+      "source_class": "f2_block",
+      "label": "f2_block",
+      "path": "evaluation/campus_dataset/images/f2_block/CampusDataset_f2_block_f2_block_006.jpg",
+      "source_path": "images/f2_block/f2_block_006.jpg",
+      "original_name": "1000078966.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "label": "i2_block",
+      "path": "evaluation/campus_dataset/images/i2_block/CampusDataset_i2_block_i2_block_003.jpg",
+      "source_path": "images/i2_block/i2_block_003.jpg",
+      "original_name": "1000078955.jpg"
+    },
+    {
+      "source_class": "i2_block",
+      "label": "i2_block",
+      "path": "evaluation/campus_dataset/images/i2_block/CampusDataset_i2_block_i2_block_006.jpg",
+      "source_path": "images/i2_block/i2_block_006.jpg",
+      "original_name": "1000078958.jpg"
+    },
+    {
+      "source_class": "j3_block",
+      "label": "j3_block",
+      "path": "evaluation/campus_dataset/images/j3_block/CampusDataset_j3_block_j3_block_003.jpg",
+      "source_path": "images/j3_block/j3_block_003.jpg",
+      "original_name": "1000078917.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "label": "k2_block",
+      "path": "evaluation/campus_dataset/images/k2_block/CampusDataset_k2_block_k2_block_006.jpg",
+      "source_path": "images/k2_block/k2_block_006.jpg",
+      "original_name": "1000078928.jpg"
+    },
+    {
+      "source_class": "k2_block",
+      "label": "k2_block",
+      "path": "evaluation/campus_dataset/images/k2_block/CampusDataset_k2_block_k2_block_008.jpg",
+      "source_path": "images/k2_block/k2_block_008.jpg",
+      "original_name": "1000078930.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "label": "Megabyte",
+      "path": "evaluation/campus_dataset/images/Megabyte/CampusDataset_megabite_megabite_002.jpg",
+      "source_path": "images/megabite/megabite_002.jpg",
+      "original_name": "1000078887.jpg"
+    },
+    {
+      "source_class": "megabite",
+      "label": "Megabyte",
+      "path": "evaluation/campus_dataset/images/Megabyte/CampusDataset_megabite_megabite_007.jpg",
+      "source_path": "images/megabite/megabite_007.jpg",
+      "original_name": "1000078892.jpg"
+    },
+    {
+      "source_class": "raras",
+      "label": "Raras Foodtruck",
+      "path": "evaluation/campus_dataset/images/Raras Foodtruck/CampusDataset_raras_raras_002.jpg",
+      "source_path": "images/raras/raras_002.jpg",
+      "original_name": "1000078920.jpg"
+    },
+    {
+      "source_class": "wall_street",
+      "label": "wall_street",
+      "path": "evaluation/campus_dataset/images/wall_street/CampusDataset_wall_street_wall_street_002.jpg",
+      "source_path": "images/wall_street/wall_street_002.jpg",
+      "original_name": "1000078946.jpg"
+    }
+  ]
+}

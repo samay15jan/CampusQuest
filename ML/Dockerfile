@@ -11,6 +11,7 @@ RUN python -m pip install --upgrade pip && python -m pip install -r requirements
 COPY embedding.py ./embedding.py
 COPY ml ./ml
 COPY photos ./photos
+COPY evaluation ./evaluation
 COPY config ./config
 COPY data ./data
 COPY entrypoint.sh ./entrypoint.sh
