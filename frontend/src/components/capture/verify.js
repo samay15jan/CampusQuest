@@ -1,5 +1,5 @@
 export const ALLOWED_RANGE = 50; // meters
-export const MIN_SIMILARITY = 70; // percent
+export const MIN_SIMILARITY = 0.7; // raw cosine score; align with backend
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

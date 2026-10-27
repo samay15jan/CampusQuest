@@ -7,7 +7,8 @@ import { ALLOWED_RANGE, MIN_SIMILARITY } from "./verify.js";
 function failReason(r) {
   if (r.locationError) return "We couldn't read your location. Enable location access and try again.";
   if (!r.locationOk) return `You're ${r.distance} m away. Get within ${ALLOWED_RANGE} m of the portal.`;
-  return `Photo similarity was ${r.similarity}% (needs ≥ ${MIN_SIMILARITY}%). Retake it with the full structure in frame.`;
+  if (r.message) return r.message;
+  return `Cosine similarity was ${r.similarity == null ? 'unavailable' : r.similarity.toFixed(2)} (needs ≥ ${r.requiredScore ?? MIN_SIMILARITY}). Retake it with the full structure in frame.`;
 }
 
 const Dot = ({ ok, accent }) => (
@@ -34,7 +35,7 @@ export default function VerificationResult({ portal, photo, result, accent, onBa
 
   const checks = [
     ["pin", "Location Match", `Within ${ALLOWED_RANGE} meters`, locationOk],
-    ["image", "Visual Similarity", `${similarity}% (≥ ${MIN_SIMILARITY}%)`, imageOk],
+    ["image", "Visual Similarity", `${similarity == null ? 'Unavailable' : similarity.toFixed(2)} (≥ ${result.requiredScore ?? MIN_SIMILARITY})`, imageOk],
     ["camera", "Portal Status", ok ? "Ready for resonator" : "Not verified", ok],
   ];
 
@@ -48,11 +49,12 @@ export default function VerificationResult({ portal, photo, result, accent, onBa
           </span>
           <h2 className="mt-4 font-display text-2xl font-bold">{ok ? "Portal Verified" : "Verification Failed"}</h2>
           <p className="mt-1 text-sm text-mute">{ok ? "Your location and photo match this portal." : failReason(result)}</p>
+          <p className="mt-2 text-xs text-mute">Cosine similarity is a visual matching score, not a probability.</p>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Metric icon="pin" title={locationOk ? "Location Confirmed" : "Location Mismatch"} value={distance != null ? `${distance} m away` : "Unavailable"} ok={locationOk} accent={accent} />
-          <Metric icon="image" title={imageOk ? "Visual Match" : "Visual Mismatch"} value={`${similarity}% similarity`} ok={imageOk} accent={accent} />
+          <Metric icon="image" title={imageOk ? "Visual Match" : "Visual Mismatch"} value={similarity == null ? 'Unavailable' : `${similarity.toFixed(2)} cosine score`} ok={imageOk} accent={accent} />
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-2">

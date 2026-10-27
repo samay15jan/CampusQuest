@@ -167,7 +167,7 @@ CREATE TABLE deploy_verifications (
   longitude     DOUBLE PRECISION NOT NULL,
   distance_m    DOUBLE PRECISION NOT NULL,
   location_ok   BOOLEAN NOT NULL,
-  similarity    DOUBLE PRECISION,                         -- 0..1, NULL if the photo was not compared
+  similarity    DOUBLE PRECISION,                         -- raw cosine similarity [-1, 1], NULL if not compared
   image_ok      BOOLEAN NOT NULL DEFAULT FALSE,
   passed        BOOLEAN NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),

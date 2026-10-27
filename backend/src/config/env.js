@@ -32,8 +32,10 @@ export const env = {
   CAMPUS_TZ: str(process.env.CAMPUS_TZ, 'Asia/Kolkata'),
   PORTAL_WINDOWS: str(process.env.PORTAL_WINDOWS, '09:00-12:30,14:00-17:00'),
 
-  IMAGE_MATCHER: str(process.env.IMAGE_MATCHER, 'mock'),
-  IMAGE_MATCHER_URL: str(process.env.IMAGE_MATCHER_URL),
+  IMAGE_MATCHER: str(process.env.IMAGE_MATCHER, 'http'),
+  IMAGE_MATCHER_URL: str(process.env.IMAGE_MATCHER_URL, 'http://localhost:8000/v1/predict'),
+  IMAGE_MATCHER_TOKEN: str(process.env.INFERENCE_API_TOKEN),
+  IMAGE_MATCHER_TIMEOUT_MS: num(process.env.IMAGE_MATCHER_TIMEOUT_MS, 15000),
   MATCHER_MOCK_SIMILARITY: num(process.env.MATCHER_MOCK_SIMILARITY, 0.72),
   IMAGE_MATCH_THRESHOLD: num(process.env.IMAGE_MATCH_THRESHOLD, 0.7),
   DEPLOY_RANGE_M: num(process.env.DEPLOY_RANGE_M),

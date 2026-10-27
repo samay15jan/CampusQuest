@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Icon from "../ui/Icon.jsx";
 import ScreenHeader from "../ui/ScreenHeader.jsx";
 import { GREEN } from "../../theme.js";
-import { ALLOWED_RANGE, checkLocation } from "./verify.js";
+import { ALLOWED_RANGE, MIN_SIMILARITY, checkLocation } from "./verify.js";
 import { verifyPortal } from "../../api/capture.js";
 
 function StatusRow({ icon, color, title, sub, done, failed }) {
@@ -73,7 +73,10 @@ export default function Verifying({ portal, photo, accent, onBack, onDone }) {
           ok: result.passed,
           verification_id: result.verification_id,
           distance: result.location?.distance_m ?? location.distance,
-          similarity: result.image?.similarity ?? 0,
+          similarity: result.image?.similarity_score ?? result.image?.similarity ?? null,
+          requiredScore: result.image?.required_score ?? MIN_SIMILARITY,
+          predictedTerritory: result.image?.predicted_territory ?? null,
+          recognitionStatus: result.image?.recognition_status ?? null,
           locationOk: Boolean(result.location?.ok),
           imageOk: Boolean(result.image?.ok),
           locationError: false,

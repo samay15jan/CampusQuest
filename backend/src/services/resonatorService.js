@@ -1,16 +1,14 @@
 // Resonator inventory, location+photo verification, and deployment.
 import { createReadStream } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { query, queryMany, withTransaction } from '../db/db.js';
 import { gameConfig } from '../config/game.js';
-import { env } from '../config/env.js';
 import { httpError } from '../lib/errors.js';
 import {
   getPlayer, requireOnboarded, requireLiveEvent, requirePortalOpen, getEventPortal,
   distanceTo, rangeFor, today, awardXp, logEvent, getCurrentEvent,
 } from '../lib/context.js';
-import { compareImages, matcherMode } from '../matcher/index.js';
+import { compareImages } from '../matcher/index.js';
+import { territoryLabelsMatch } from '../matcher/labels.js';
 import { getActiveResonators, recalculatePortal, stateView } from './portalState.js';
 
 /** Derived, never stored: resonators earned this event (correct riddles) minus resonators deployed this event. */
@@ -45,7 +43,7 @@ export async function getMyResonators(uid) {
  * Always answers 200 with details so the UI can show the result screen; a passed result
  * carries a single-use verification_id that POST /portals/:id/deploy consumes.
  */
-export async function verifyPortal(uid, portalId, { photo, latitude, longitude }) {
+export async function verifyPortal(uid, portalId, { photo, mimeType = 'image/jpeg', latitude, longitude }) {
   const player = await getPlayer(uid);
   requireOnboarded(player);
   const ev = await requireLiveEvent();
@@ -60,17 +58,13 @@ export async function verifyPortal(uid, portalId, { photo, latitude, longitude }
   const range = rangeFor(portal, 'deploy');
   const locationOk = distance <= range;
 
-  let similarity = null;
-  if (locationOk) {                                     // skip the (expensive) matcher when too far away
-    const refs = await queryMany('SELECT id, file_path FROM portal_reference_images WHERE portal_id = $1 ORDER BY is_primary DESC, id', [portal.id]);
-    const references = [];
-    for (const r of refs) {
-      try { references.push({ id: r.id, buffer: await readFile(path.join(env.UPLOAD_DIR, r.file_path)) }); } catch { /* missing file: skip */ }
-    }
-    if (!references.length && matcherMode !== 'mock') throw httpError(409, 'This portal has no reference image yet. Ask an admin to add one');
-    similarity = (await compareImages({ photo, references })).similarity;
+  let recognition = null;
+  if (locationOk) { // Avoid sending photos to the recognition service when GPS already fails.
+    recognition = await compareImages({ photo, mimeType });
   }
-  const imageOk = similarity !== null && similarity >= gameConfig.IMAGE_MATCH_THRESHOLD;
+  const similarity = recognition?.similarity ?? null; // raw cosine score in [-1, 1], not a percentage
+  const labelMatches = Boolean(recognition?.accepted && territoryLabelsMatch(recognition.predictedTerritory, portal.name));
+  const imageOk = Boolean(recognition && labelMatches && similarity >= gameConfig.IMAGE_MATCH_THRESHOLD);
   const passed = locationOk && imageOk;
 
   const { rows } = await query(
@@ -83,8 +77,8 @@ export async function verifyPortal(uid, portalId, { photo, latitude, longitude }
     verification_id: passed ? rows[0].id : null,
     expires_in_seconds: passed ? gameConfig.VERIFICATION_TTL_SECONDS : null,
     location: { ok: locationOk, distance_m: Math.round(distance), allowed_range_m: range },
-    image: { ok: imageOk, similarity: similarity === null ? null : Math.round(similarity * 100), required_pct: Math.round(gameConfig.IMAGE_MATCH_THRESHOLD * 100) },
-    message: passed ? 'Portal verified' : !locationOk ? `Too far from the portal (${Math.round(distance)} m)` : 'The photo does not match this portal. Try again',
+    image: { ok: imageOk, similarity, similarity_score: similarity, required_score: gameConfig.IMAGE_MATCH_THRESHOLD, predicted_territory: recognition?.predictedTerritory ?? null, recognition_status: recognition?.status ?? null, label_matches: labelMatches, metric: 'cosine_similarity' },
+    message: passed ? 'Portal verified' : !locationOk ? `Too far from the portal (${Math.round(distance)} m)` : recognition?.accepted && !labelMatches ? 'The photo appears to show a different territory. Try again' : recognition && !recognition.accepted ? 'The photo could not be matched confidently. Try again' : 'The photo does not match this portal. Try again',
   };
 }
 

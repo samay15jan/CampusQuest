@@ -2,7 +2,6 @@ services:
   api:
     build: .
     container_name: campusquest-api
-    # Apply migrations + (idempotent) seed, then start with hot reload.
     command: sh -c "node scripts/migrate.js && node scripts/seed.js && npx nodemon --legacy-watch src/server.js"
     ports:
       - "4000:4000"
@@ -17,6 +16,11 @@ services:
       DB_USER: campus
       DB_PASSWORD: campus123
       UPLOAD_DIR: /app/uploads
+      IMAGE_MATCHER: http
+      IMAGE_MATCHER_URL: http://campusquest-recognition:8000/v1/predict
+      IMAGE_MATCHER_TIMEOUT_MS: 15000
+      IMAGE_MATCH_THRESHOLD: 0.70
+      INFERENCE_API_TOKEN: ${INFERENCE_API_TOKEN:?Set INFERENCE_API_TOKEN in backend/.env}
     volumes:
       - ./src:/app/src
       - ./db:/app/db:ro
@@ -25,6 +29,33 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      campusquest-recognition:
+        condition: service_healthy
+
+  campusquest-recognition:
+    build:
+      context: ../ML
+    image: campusquest-image-recognition:local
+    container_name: campusquest-recognition
+    restart: unless-stopped
+    environment:
+      INFERENCE_API_TOKEN: ${INFERENCE_API_TOKEN:?Set INFERENCE_API_TOKEN in backend/.env}
+      GALLERY_PATH: /data/gallery.npz
+      GALLERY_EXCLUDE_FILE: /app/config/gallery_exclude.txt
+      PHOTOS_DIR: /app/photos
+      AUTO_BUILD_GALLERY: ${AUTO_BUILD_GALLERY:-true}
+      MIN_SIMILARITY: ${MIN_SIMILARITY:-0.65}
+      MIN_MARGIN: ${MIN_MARGIN:-0.04}
+      MAX_IMAGE_BYTES: 8388608
+      PORT: 8000
+    volumes:
+      - recognition-gallery:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 600s
 
   postgres:
     image: postgres:16
@@ -46,3 +77,4 @@ services:
 volumes:
   pgdata:
   uploads:
+  recognition-gallery:

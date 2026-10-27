@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from embedding import predict_image
+from embedding import l2_normalize, predict_image
 from ml.build_gallery import collect_paths
 from ml.service.validation import ImageInputError, validate_image_bytes
 
@@ -49,6 +49,25 @@ class PredictionTests(unittest.TestCase):
                    "labels": np.array(["Library", "Helipad"]), "paths": []}
         result = predict_image(FixedEncoder(), gallery, jpeg_bytes(), min_similarity=0.65, min_margin=0.04)
         self.assertFalse(result["accepted"])
+
+    def test_other_class_is_never_returned_as_a_recognized_territory(self):
+        gallery = {"embeddings": np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32),
+                   "labels": np.array(["_other", "Library"]), "paths": []}
+        result = predict_image(FixedEncoder(), gallery, jpeg_bytes(), min_similarity=0.65, min_margin=0.04)
+        self.assertFalse(result["accepted"])
+        self.assertIsNone(result["predictedTerritory"])
+        self.assertEqual(result["status"], "unknown")
+
+    def test_similarity_uses_normalized_gallery_vectors(self):
+        gallery = {"embeddings": np.array([[50.0, 0.0], [0.0, 4.0]], dtype=np.float32),
+                   "labels": np.array(["Library", "Helipad"]), "paths": []}
+        result = predict_image(FixedEncoder(), gallery, jpeg_bytes(), min_similarity=0.65, min_margin=0.04)
+        self.assertLessEqual(result["similarity"], 1.0)
+        self.assertAlmostEqual(result["similarity"], 1.0, places=6)
+
+    def test_zero_embedding_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "non-zero norm"):
+            l2_normalize(np.zeros((1, 2), dtype=np.float32))
 
 
 class UploadValidationTests(unittest.TestCase):

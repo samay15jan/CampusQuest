@@ -2,11 +2,13 @@
 
 This ZIP contains a separately runnable, authenticated image-recognition service and a Node.js ES module client adapter. The service predicts which **populated reference-photo territory** best matches an uploaded image. It does not authenticate players, check GPS, grant resonators, score the game, deploy to a territory, or make any final game decision.
 
-## Important: game backend was not present in the supplied workspace
+## Backend integration
 
-I inspected the accessible project. It contains the photo dataset and an ML helper/notebook, but **no Node/Fastify application, PostgreSQL schema, Firebase setup, or existing Docker Compose configuration**. I therefore could not edit or test actual game routes, preserve backend rules in code, or wire image recognition into the real deployment. The ZIP provides the Python service and a tested Node client adapter for that integration point. A project owner or developer with the backend files must call the adapter from the existing authenticated photo flow and pass the result into the existing game-rule decision.
+This repository includes the CampusQuest Fastify backend and the private Python recognition service. The backend calls `POST /v1/predict` with raw image bytes and a bearer token after its existing player and GPS checks. It only approves capture when the service accepts a prediction, the predicted territory matches the selected portal (including the two reviewed aliases), and the backend threshold passes. An unavailable service or unmatched territory fails closed. The model does not authenticate players, check GPS, grant resonators, or make the final game decision.
 
-The game backend must remain authoritative. Only call the service after the game has authenticated the player and validated the upload/session. Combine its result with GPS and current game rules. Never let an image response alone approve a deployment. Old photos, screenshots, spoofed GPS, and visually similar locations can fool this model.
+Run the integrated stack from `backend/` after copying `.env.example` to `.env` and setting a private `INFERENCE_API_TOKEN`. Docker Compose starts the API, PostgreSQL, and recognition service on a private network; the model/gallery build can take several minutes the first time. Do not expose the recognition port or share its token with the frontend.
+
+The current dataset is small and has no `_other` reference photos, so unknown-place rejection is not yet validated against realistic negative images. The score and margin are ranking signals, not probabilities. Do not claim a target accuracy until independent held-out photos and campus-negative examples have been collected and evaluated.
 
 ## What the supplied dataset contains
 
@@ -81,28 +83,11 @@ Example accepted result:
 
 Values above are illustrative. The implementation never hardcodes prediction values. If the score or separation is insufficient, `accepted` is false and `predictedTerritory` is `null`. Default score/margin thresholds are configurable in `.env`, but they are **unvalidated starting values**, not calibrated confidence cutoffs. Calibrate using independent target photos and realistic negative images before use.
 
-## Connect the existing Node/Fastify backend
+## Backend request path
 
-`integration/image-recognition-client.mjs` is a dependency-free ES module for Node.js 18+. Configure the existing backend with:
+The backend integration is implemented in `backend/src/matcher/` and `backend/src/services/resonatorService.js`. The matcher sends raw image bytes to the ML service with the bearer token. The route forwards the actual JPEG/PNG/WebP MIME type. `resonatorService` keeps authentication, GPS checks, score thresholding, territory-name matching, and deployment approval on the server. Docker Compose attaches API and model containers to the same private network and does not publish the model port.
 
-- `IMAGE_RECOGNITION_URL=http://127.0.0.1:8000` when Node runs on the same host; or the recognition service's private Docker DNS name when both containers share a Docker network.
-- `IMAGE_RECOGNITION_TOKEN` equal to the service's `INFERENCE_API_TOKEN`.
-
-Use it inside the existing authenticated, validated photo route. For a Node process on the host:
-
-```js
-import { createImageRecognitionClient } from "./integration/image-recognition-client.mjs";
-
-const imageRecognition = createImageRecognitionClient();
-// Inside your existing authenticated and game-session-validated flow:
-const visualSignal = await imageRecognition.recognize(imageBuffer, { contentType: "image/jpeg" });
-// Pass visualSignal into existing server-side game rules together with GPS/session data.
-// The existing game service, not this client or ML service, decides deployment.
-```
-
-When the backend runs in a separate container, attach it and this service to a shared private Docker network and use the recognition container DNS name. Do not expose the inference port publicly or pass its token to client apps. Add a timeout/failure policy in the existing backend; an unavailable model must not become an approval.
-
-No Fastify route, Firebase Authentication middleware, GPS validation, territory API, or PostgreSQL migration is included, because none of those source files or contracts were available. The adapter has not been connected to or tested against your real game. Provide the backend project to implement and verify that final integration without guessing its game rules.
+Use the two explicit label aliases in `backend/src/matcher/labels.js` only. Labels not known to match backend portal names fail closed until the team confirms their mapping. The dependency-free `integration/image-recognition-client.mjs` remains a standalone example client; the backend uses its own authenticated matcher adapter.
 
 ## Evaluate the added dataset
 
@@ -120,7 +105,7 @@ Add genuine photos to `photos/<Exact Territory Name>/`, clean the source labels,
 
 ## Tests
 
-Run tests locally with Python 3.11 and Node.js 18 or later:
+Run the ML unit suite with Python 3.11 and Node.js 22 or later:
 
 ```powershell
 python -m pip install -r requirements-test.txt
@@ -128,7 +113,7 @@ python -m unittest discover -s ml/tests -v
 node --test integration/image-recognition-client.test.mjs
 ```
 
-The tests cover similarity acceptance/rejection, image byte/type/pixel limits, exclusion list behavior, API auth/readiness/upload validation, and the Node adapter contract. They do not test Firebase, GPS, database/game decisions, a real trained gallery, or held-out model accuracy because the CampusQuest backend and session-labelled evaluation data were not supplied.
+The repository also has focused backend tests for the explicit territory aliases. The database-backed end-to-end suite was not run as part of this change because it wipes its configured test database; set up a dedicated database whose name ends in `_test` before running it. Unit tests do not establish real-world model accuracy; use independent photos and negative examples for that.
 
 ## Troubleshooting
 

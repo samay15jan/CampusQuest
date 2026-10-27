@@ -35,7 +35,12 @@ def load_image(source: Any, size: int = IMG_SIZE) -> np.ndarray:
 
 def l2_normalize(vectors: np.ndarray) -> np.ndarray:
     vectors = np.asarray(vectors, dtype=np.float32)
-    return vectors / np.maximum(np.linalg.norm(vectors, axis=-1, keepdims=True), 1e-12)
+    if not np.isfinite(vectors).all():
+        raise ValueError("Embeddings contain non-finite values")
+    norms = np.linalg.norm(vectors, axis=-1, keepdims=True)
+    if np.any(norms <= 1e-12):
+        raise ValueError("Embeddings must have non-zero norm")
+    return vectors / norms
 
 
 def create_encoder(weights: str = "imagenet"):
@@ -84,10 +89,15 @@ def predict_image(
     """
     vectors = np.asarray(gallery["embeddings"], dtype=np.float32)
     labels = np.asarray(gallery["labels"]).astype(str)
-    if len(vectors) != len(labels) or not len(labels):
-        raise ValueError("Gallery must contain matching non-empty embeddings and labels")
+    if vectors.ndim != 2 or len(vectors) != len(labels) or not len(labels):
+        raise ValueError("Gallery must contain matching non-empty 2D embeddings and labels")
+    if not np.isfinite(vectors).all() or not labels.size or any(not label.strip() for label in labels):
+        raise ValueError("Gallery contains invalid embeddings or labels")
+    vectors = l2_normalize(vectors)
     query = embed_images(model, [image])[0]
-    similarities = vectors @ query
+    if query.ndim != 1 or vectors.shape[1] != query.shape[0]:
+        raise ValueError("Query embedding does not match gallery dimensions")
+    similarities = np.clip(vectors @ query, -1.0, 1.0)
     names = sorted(set(labels))
     scores = {}
     for name in names:
@@ -99,9 +109,13 @@ def predict_image(
     margin = scores[best] - second_score
     accepted = best != unknown_label and scores[best] >= min_similarity and margin >= min_margin
     predictions = [{"label": name, "similarity": scores[name]} for name in ranked[: max(1, top_k)]]
+    status = "matched" if accepted else ("unknown" if best == unknown_label else "uncertain")
     return {
         "predictedTerritory": best if accepted else None,
         "accepted": bool(accepted),
+        "recognized": bool(accepted),
+        "status": status,
+        "message": "Territory matched" if accepted else ("Unknown location" if status == "unknown" else "Image match is uncertain"),
         "similarity": scores[best],
         "margin": float(margin),
         "predictions": predictions,

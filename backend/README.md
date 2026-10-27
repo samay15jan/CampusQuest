@@ -103,16 +103,22 @@ All except `/health` and `/portals/:id/image` need `Authorization: Bearer <Fireb
 
 **Reference images:** upload at least one photo per portal (the 14-15 seeded portals have none). Until then the matcher has nothing to compare against (in `http` mode verification returns 409; in `mock` mode it still works).
 
-## Image recognition (plug-in point)
-`IMAGE_MATCHER=mock` always returns `MATCHER_MOCK_SIMILARITY` (0.72). When your team's model is ready, run it as a service and set `IMAGE_MATCHER=http` + `IMAGE_MATCHER_URL`. The backend calls it only after the GPS check passes:
+## Image recognition
 
+The backend sends the captured image as raw bytes to the private EfficientNet recognition service after the existing GPS check. Configure `INFERENCE_API_TOKEN` once in `backend/.env`; Compose passes the same secret to both containers. `IMAGE_MATCHER_URL` is `http://campusquest-recognition:8000/v1/predict` inside Compose. Do not publish this service port or put its token in the frontend.
+
+Capture is approved only when the service returns `accepted: true`, the predicted territory matches the selected portal, and its raw cosine score meets `IMAGE_MATCH_THRESHOLD`. The displayed score is a cosine-similarity signal in `[-1, 1]`, not a percent or probability. Only the reviewed aliases Gate 2A → Gate No. 2 and Raras Foodtruck → Rara's Food Truck are normalized; other label mismatches fail closed until their territory mapping is confirmed. The small current dataset and empty `_other` class do not support a reliable accuracy claim or a calibrated threshold.
+
+Start the stack from this directory with Docker Desktop running:
+
+```powershell
+Copy-Item .env.example .env
+# Edit .env and set INFERENCE_API_TOKEN to a long random secret.
+docker compose up --build -d
+docker compose logs -f campusquest-recognition
 ```
-POST IMAGE_MATCHER_URL
-{ "photo_base64": "...", "references": [ { "id": 3, "image_base64": "..." } ] }
-→ 200 { "similarity": 0.0-1.0, "reference_id": 3 }      // best match across the references
-```
-The pass mark is `IMAGE_MATCH_THRESHOLD` (default 0.70, matches the UI's "≥ 70%").
-Anti-fraud: the app should use live camera only (as in the design). The server does not store submitted photos.
+
+The first start downloads model weights and builds the gallery, which can take several minutes. Wait until the backend and recognition service report ready. Submit a real, in-range capture to test the integrated path. The backend must never approve a capture when the recognition service is unavailable.
 
 ## Event lifecycle
 A scheduler (every 30 s) activates scheduled events, finalises ended ones (winner = higher event XP, tie = no winner; bonus to the winner's participants) and creates next week's event if none exists. You can also drive it manually through `/admin/events`.

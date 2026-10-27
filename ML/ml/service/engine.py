@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from embedding import create_encoder, load_gallery, predict_image
+from embedding import create_encoder, load_gallery, l2_normalize, predict_image
 
 
 class RecognitionEngine:
@@ -30,6 +30,10 @@ class RecognitionEngine:
             raise ValueError("Gallery has invalid or empty embeddings/labels")
         if not np.isfinite(embeddings).all():
             raise ValueError("Gallery embeddings contain non-finite values")
+        if not len(labels) or any(not str(label).strip() for label in labels):
+            raise ValueError("Gallery labels are empty or invalid")
+        gallery["embeddings"] = l2_normalize(embeddings)
+        gallery["labels"] = labels.astype(str)
         model = create_encoder(weights="imagenet")
         if embeddings.shape[1] != int(model.output_shape[-1]):
             raise ValueError("Gallery embedding size does not match the configured encoder")
