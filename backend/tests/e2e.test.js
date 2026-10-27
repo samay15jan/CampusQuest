@@ -166,6 +166,15 @@ test('read endpoints: event, portals, leaderboard, activity, heatmap, resonators
   assert.equal((await call('GET', '/portals', {})).status, 401);
 });
 
+test('public dashboard snapshot works without auth and leaks no private fields', async () => {
+  const res = await call('GET', '/public/dashboard', {});
+  assert.equal(res.status, 200);
+  assert.ok(res.body.event && res.body.scores && Array.isArray(res.body.portals));
+  assert.ok(Array.isArray(res.body.leaderboard.red) && Array.isArray(res.body.leaderboard.blue));
+  assert.ok(res.body.portals.every((p) => !('you' in p)));
+  assert.ok(!JSON.stringify(res.body).includes('@test.dev'));
+});
+
 test('admin + weekly finalisation awards the winner bonus', async () => {
   assert.equal((await call('GET', '/admin/portals', {})).status, 401);
   assert.equal((await call('GET', '/admin/portals', { headers: admin })).body.length, portals.length);

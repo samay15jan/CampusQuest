@@ -31,7 +31,7 @@ export default function BottomNav({ view, onChange, accent, items = NAV_ITEMS, o
           <button
             aria-label="Scan"
             onClick={onScan}
-            disabled={!scanEnabled}
+            disabled={false}
             className="-mr-5 -mt-12 grid h-20 w-20 place-items-center rounded-l-full rounded-tr-full border-2 bg-[#0b0d16] transition-colors disabled:cursor-not-allowed"
             style={scanEnabled
               ? { borderColor: accent, color: accent, boxShadow: `0 0 18px ${accent}88` }

@@ -11,3 +11,4 @@ export const OWNERS = {
 
 export const teamAccent = (team) => (team === "blue" ? BLUE : RED);
 export const GREEN = "#22c55e";
+export const ownerColor = (owner) => (owner === "red" ? RED : owner === "blue" ? BLUE : NEUTRAL);

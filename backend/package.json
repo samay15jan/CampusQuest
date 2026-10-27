@@ -9,7 +9,8 @@
     "start": "node src/server.js",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
-    "test": "node --test tests/e2e.test.js"
+    "test": "node --test tests/e2e.test.js",
+    "test:matcher": "node --test tests/matcher.test.js"
   },
   "engines": { "node": ">=22" },
   "dependencies": {

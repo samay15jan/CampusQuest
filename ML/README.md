@@ -1,6 +1,81 @@
 # CampusQuest Image Recognition Product
 
-This ZIP contains a separately runnable, authenticated image-recognition service and a Node.js ES module client adapter. The service predicts which **populated reference-photo territory** best matches an uploaded image. It does not authenticate players, check GPS, grant resonators, score the game, deploy to a territory, or make any final game decision.
+# Setup
+## Public access with Cloudflare Tunnel
+
+The app runs locally in Docker and is exposed at a fixed URL through a named Cloudflare Tunnel. It only runs in the foreground (no systemd service), so it must be started manually.
+
+### Prerequisites
+- Domain managed by Cloudflare (nameservers pointed to Cloudflare)
+- `cloudflared` installed (`cloudflared --version`)
+- Docker running
+
+### One-time setup
+
+```bash
+# 1. Log in and authorize your domain (opens a browser)
+cloudflared tunnel login
+
+# 2. Create the tunnel (prints a <UUID> and saves ~/.cloudflared/<UUID>.json)
+cloudflared tunnel create campusquest
+
+# 3. Create the DNS record for the public hostname
+cloudflared tunnel route dns campusquest campusquest.<yourdomain.com>
+```
+
+### Configure
+
+Edit `config/config.yml` in this repo and fill in your values:
+
+```yaml
+tunnel: <UUID>
+credentials-file: /home/<your-user>/.cloudflared/<UUID>.json
+
+ingress:
+  - hostname: campusquest.<yourdomain.com>
+    service: http://localhost:<port>
+  - service: http_status:404
+```
+
+`<port>` is the host port your container publishes (check with `docker compose ps`).
+
+Then copy it to where `cloudflared` looks for it:
+
+```bash
+mkdir -p ~/.cloudflared
+cp config/config.yml ~/.cloudflared/config.yml
+```
+
+Check it is valid:
+
+```bash
+cloudflared tunnel ingress validate
+```
+
+### Run
+
+```bash
+# Terminal 1: start the app
+docker compose up -d --build
+
+# Terminal 2: start the tunnel (keep this running)
+cloudflared tunnel run campusquest
+```
+
+The app is now available at `https://campusquest.<yourdomain.com>`.
+
+To stop: press `Ctrl+C` in the tunnel terminal and run `docker compose down`.
+Tip: run the tunnel inside `tmux` or `screen` so it survives closing the terminal.
+
+### Troubleshooting
+- `No ingress rules were defined` → `~/.cloudflared/config.yml` is missing or invalid. Re-copy it and run `cloudflared tunnel ingress validate`.
+- `502 / 503` → the container isn't running or the port in `service:` is wrong. Test with `curl -I http://localhost:<port>`.
+- DNS record already exists → delete the old A/CNAME for that hostname in the Cloudflare dashboard and rerun the `route dns` command.
+
+### Security
+Never commit `~/.cloudflared/cert.pem` or `~/.cloudflared/<UUID>.json`. They are credentials for your Cloudflare account and tunnel.
+
+---
 
 ## Backend integration
 

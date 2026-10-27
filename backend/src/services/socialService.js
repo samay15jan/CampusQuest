@@ -4,14 +4,8 @@ import { httpError } from '../lib/errors.js';
 import { levelInfo } from '../lib/levels.js';
 import { getCurrentEvent, getPlayer } from '../lib/context.js';
 
-/** scope: global | red | blue   period: event (XP earned this week) | all (lifetime XP) */
-export async function getLeaderboard(uid, { scope = 'global', period = 'event', limit = 20 }) {
-  const me = await getPlayer(uid);
-  const ev = period === 'event' ? await getCurrentEvent() : null;
-  if (period === 'event' && !ev) throw httpError(404, 'No event scheduled');
-  const faction = scope === 'global' ? null : scope;
-
-  const rows = await queryMany(
+async function leaderboardRows({ faction, period, ev, limit, meId }) {
+  return queryMany(
     `WITH pts AS (
        SELECT u.id, u.username, u.avatar, u.faction, u.xp,
               ${period === 'event'
@@ -20,14 +14,33 @@ export async function getLeaderboard(uid, { scope = 'global', period = 'event', 
        FROM users u WHERE u.username IS NOT NULL AND u.faction IS NOT NULL AND ($1::text IS NULL OR u.faction = $1)
      ), ranked AS (SELECT pts.*, ROW_NUMBER() OVER (ORDER BY points DESC, id) AS rank FROM pts)
      SELECT * FROM ranked WHERE rank <= $3 OR id = $4 ORDER BY rank`,
-    [faction, ev?.id ?? null, limit, me.id]
+    [faction, ev?.id ?? null, limit, meId]
   );
-  const shape = (r) => ({ rank: Number(r.rank), user_id: r.id, username: r.username, avatar: r.avatar, faction: r.faction, level: levelInfo(r.xp).level, points: r.points });
+}
+
+const shapeRow = (r) => ({ rank: Number(r.rank), user_id: r.id, username: r.username, avatar: r.avatar, faction: r.faction, level: levelInfo(r.xp).level, points: r.points });
+
+/** scope: global | red | blue   period: event (XP earned this week) | all (lifetime XP) */
+export async function getLeaderboard(uid, { scope = 'global', period = 'event', limit = 20 }) {
+  const me = await getPlayer(uid);
+  const ev = period === 'event' ? await getCurrentEvent() : null;
+  if (period === 'event' && !ev) throw httpError(404, 'No event scheduled');
+  const faction = scope === 'global' ? null : scope;
+
+  const rows = await leaderboardRows({ faction, period, ev, limit, meId: me.id });
   return {
     scope, period,
-    entries: rows.filter((r) => Number(r.rank) <= limit).map(shape),
-    me: rows.filter((r) => r.id === me.id).map(shape)[0] ?? null,
+    entries: rows.filter((r) => Number(r.rank) <= limit).map(shapeRow),
+    me: rows.filter((r) => r.id === me.id).map(shapeRow)[0] ?? null,
   };
+}
+
+/** Public top-N for one faction (big-screen dashboard). Usernames/avatars/levels/points only. */
+export async function getPublicLeaderboard(faction, { limit = 5 } = {}) {
+  const ev = await getCurrentEvent();
+  if (!ev) return [];
+  const rows = await leaderboardRows({ faction, period: 'event', ev, limit, meId: -1 });
+  return rows.filter((r) => Number(r.rank) <= limit).map(shapeRow);
 }
 
 const FEED_TYPES = ['RESONATOR_DEPLOYED', 'RESONATOR_DESTROYED', 'PORTAL_CAPTURED', 'PORTAL_LOST'];

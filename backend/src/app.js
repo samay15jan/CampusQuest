@@ -8,6 +8,7 @@ import healthRoutes from './routes/health.js';
 import meRoutes from './routes/me.js';
 import gameRoutes from './routes/game.js';
 import adminRoutes from './routes/admin.js';
+import publicRoutes from './routes/public.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL || 'info' }, trustProxy: true });
@@ -32,6 +33,7 @@ export async function buildApp() {
   await app.register(healthRoutes);
   await app.register(meRoutes);
   await app.register(gameRoutes);
+  await app.register(publicRoutes);
   await app.register(adminRoutes);
   return app;
 }

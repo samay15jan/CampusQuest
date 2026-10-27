@@ -4,7 +4,8 @@ import LoginScreen from "./components/screens/LoginScreen.jsx";
 import FactionScreen from "./components/screens/FractionScreen.jsx";
 import InstallGate from "./components/pwa/InstallGate.jsx";
 import useInstall from "./components/pwa/useInstall.js";
-import DesktopGate from "./components/utils/DesktopGate.jsx";
+import DesktopDashboard from "./components/desktop/DesktopDashboard.jsx";
+import useIsDesktop from "./components/utils/useIsDesktop.js";
 import { AuthProvider } from "./components/auth/AuthContext.jsx";
 import RequireAuth from "./components/auth/RequireAuth.jsx";
 import ProfileScreen from "./components/screens/ProfileScreen.jsx";
@@ -16,14 +17,14 @@ import "./index.css";
 
 export default function App() {
   const { showGate, canInstall, install, dismiss } = useInstall();
+  const isDesktop = useIsDesktop();
+
+  // Big screens get the live dashboard; the login + game stays on the phone.
+  if (isDesktop) return <DesktopDashboard />;
 
   return (
     <>
-      <div className="hidden md:block">
-        <DesktopGate />
-      </div>
-
-      <div className="md:hidden">
+      <div>
         {showGate ? (
           <InstallGate canInstall={canInstall} onInstall={install} onContinue={dismiss} />
         ) : (

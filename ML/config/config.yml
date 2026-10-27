@@ -1,0 +1,7 @@
+tunnel: <UUID>
+credentials-file: /home/<USER>/.cloudflared/<UUID>.json
+
+ingress:
+  - hostname: campusquest-ml.samay15jan.com
+    service: http://localhost:8000
+  - service: http_status:404

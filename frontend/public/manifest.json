@@ -10,7 +10,7 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://campus-quest-five.vercel.app/favicon.svg",
+      "src": "https://campusquest.college/favicon.svg",
       "type": "image/svg+xml",
       "isSquare": false,
       "isPng": false,
@@ -22,7 +22,7 @@
       "is192x192": false
     },
     {
-      "src": "https://campus-quest-five.vercel.app/favicon.ico",
+      "src": "https://campusquest.college/favicon.ico",
       "type": "image/x-icon",
       "isSquare": false,
       "isPng": false,

@@ -49,6 +49,18 @@ export async function listPortals(uid, { faction } = {}) {
   return rows.map((r) => shape(r, open));
 }
 
+/** Public, player-agnostic portal list for the big-screen dashboard (no per-player flags). */
+export async function listPortalsPublic() {
+  const ev = await getCurrentEvent();
+  if (!ev) throw httpError(404, 'No event scheduled');
+  const open = openNow(ev);
+  const rows = await queryMany(`${LIST_SQL} ORDER BY p.id`, [ev.id, -1, today()]);
+  return rows.map((r) => {
+    const { you, ...rest } = shape(r, open);
+    return rest;
+  });
+}
+
 export async function getPortalDetail(uid, portalId) {
   const ev = await getCurrentEvent();
   if (!ev) throw httpError(404, 'No event scheduled');

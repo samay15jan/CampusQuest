@@ -9,7 +9,7 @@ export async function compareImages({ photo, mimeType = 'image/jpeg' }) {
   if (!env.IMAGE_MATCHER_URL || !env.IMAGE_MATCHER_TOKEN) throw httpError(503, 'Image recognition service URL or token is not configured');
   let res;
   try {
-    res = await fetch(env.IMAGE_MATCHER_URL, {
+    res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': mimeType, authorization: `Bearer ${env.IMAGE_MATCHER_TOKEN}` },
       body: photo,

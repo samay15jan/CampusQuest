@@ -101,20 +101,22 @@ export default function DashboardScreen() {
         setRiddlesPending(list.some((r) => !r.answered));
         setResonators(data?.available_resonators ?? 0);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { active = false; };
   }, [riddlesOpen, capturing]);
 
   // Nearest portal, and whether the player is within range of it.
   const nearest = position
     ? portals.reduce((best, p) => {
-        const c = portalCoordinates(p);
-        if (!c) return best;
-        const d = haversine({ lat: position.lat, lng: position.lng }, c);
-        return !best || d < best.d ? { portal: p, d } : best;
-      }, null)
+      const c = portalCoordinates(p);
+      if (!c) return best;
+      const d = haversine({ lat: position.lat, lng: position.lng }, c);
+      return !best || d < best.d ? { portal: p, d } : best;
+    }, null)
     : null;
-  const canScan = !!nearest && nearest.d <= ALLOWED_RANGE && resonators > 0;
+
+  const scanTarget = nearest?.portal ?? portals[0] ?? null;
+  const canScan = !!scanTarget;
 
   // Tapping the active tab again (other than Map) returns to the plain map.
   const onNav = (id) => {
@@ -205,7 +207,7 @@ export default function DashboardScreen() {
         onChange={onNav}
         accent={accent}
         scanEnabled={canScan}
-        onScan={() => canScan && setCapturing(nearest.portal)}
+        onScan={() => canScan && setCapturing(scanTarget)}
       />
 
       {/* Portal details */}

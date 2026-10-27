@@ -74,6 +74,7 @@ All except `/health` and `/portals/:id/image` need `Authorization: Bearer <Fireb
 | `GET /activity?limit=` | Live-activity feed (deploy / destroy / capture / lost) |
 | `GET /heatmap?hours=24` | Per-portal `{red, blue, intensity 0..1}` for the heatmap layer |
 | `GET /leaderboard?scope=global\|red\|blue&period=event\|all&limit=` | `{entries[], me}` ranked by event XP (`event`) or lifetime XP (`all`) |
+| `GET /public/dashboard` | **No auth.** Read-only snapshot for the desktop big-screen dashboard: `event`, `scores`, `seconds_remaining`, `portals[]` (no per-player flags), `leaderboard {red[5], blue[5]}`, `activity[8]`. Cached ~4 s server-side. |
 
 ### Riddles (left-side popup)
 | | |
@@ -101,7 +102,7 @@ All except `/health` and `/portals/:id/image` need `Authorization: Bearer <Fireb
 | `GET/POST /admin/riddles` · `PATCH /admin/riddles/:id` | Riddles (answer is always the portal's name; only its hash is stored) |
 | `GET /admin/stats` | Player counts |
 
-**Reference images:** upload at least one photo per portal (the 14-15 seeded portals have none). Until then the matcher has nothing to compare against (in `http` mode verification returns 409; in `mock` mode it still works).
+**Reference images:** only used to display the portal's photo in the app. Image verification does not need them.
 
 ## Image recognition
 

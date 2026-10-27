@@ -39,7 +39,7 @@ export async function getMyResonators(uid) {
 
 /**
  * POST /portals/:id/verify  (multipart: photo + latitude + longitude)
- * Checks distance and compares the live photo with the portal's reference images.
+ * Checks distance and sends the live photo to the image-recognition service (best label must be this portal at >= IMAGE_MATCH_THRESHOLD).
  * Always answers 200 with details so the UI can show the result screen; a passed result
  * carries a single-use verification_id that POST /portals/:id/deploy consumes.
  */

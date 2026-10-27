@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "../ui/Icon.jsx";
 import ScreenHeader from "../ui/ScreenHeader.jsx";
 import { GREEN } from "../../theme.js";
@@ -42,12 +42,17 @@ export default function Verifying({ portal, photo, accent, onBack, onDone }) {
   const [status, setStatus] = useState("starting");
   const [error, setError] = useState(null);
 
+  // The parent re-renders on every GPS fix and passes a fresh onDone each time. Keep it in a ref so the
+  // verification below runs exactly once per photo instead of being cancelled and restarted.
+  const latest = useRef({ portal, onDone });
+  useEffect(() => { latest.current = { portal, onDone }; });
+
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const location = await checkLocation(portal);
+        const location = await checkLocation(latest.current.portal);
         if (cancelled) return;
         setLoc(location);
 
@@ -69,7 +74,7 @@ export default function Verifying({ portal, photo, accent, onBack, onDone }) {
         await new Promise((resolve) => setTimeout(resolve, 500));
         if (cancelled) return;
 
-        onDone({
+        latest.current.onDone({
           ok: result.passed,
           verification_id: result.verification_id,
           distance: result.location?.distance_m ?? location.distance,
@@ -90,7 +95,7 @@ export default function Verifying({ portal, photo, accent, onBack, onDone }) {
     })();
 
     return () => { cancelled = true; };
-  }, [photo, portal.id, onDone]);
+  }, [photo, portal.id]);
 
   const near = loc?.distance != null && loc.distance <= ALLOWED_RANGE;
   const verifying = status === "starting" || status === "verifying";

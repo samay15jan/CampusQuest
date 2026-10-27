@@ -54,6 +54,7 @@ export default async function gameRoutes(app) {
         if (!/^image\/(jpeg|png|webp)$/.test(part.mimetype)) throw httpError(415, 'Photo must be JPEG, PNG or WebP');
         photoMimeType = part.mimetype;
         photo = await part.toBuffer();
+        photoType = part.mimetype;
       } else fields[part.fieldname] = part.value;
     }
     const latitude = Number(fields.latitude), longitude = Number(fields.longitude);

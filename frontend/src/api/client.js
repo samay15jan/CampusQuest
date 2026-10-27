@@ -1,6 +1,9 @@
 import { auth } from "../components/utils/firebase.js";
 
-export const API_URL = ("https://api.campusquest.samay15jan.com" || "http://localhost:3000").replace(/\/$/, "");
+// Set VITE_API_URL in frontend/.env.local to point at any backend (e.g. http://localhost:4000).
+// Without it: localhost in `npm run dev`, the production API in a built app.
+const DEFAULT_API = import.meta.env.DEV ? "http://localhost:3000" : "https://api.campusquest.samay15jan.com";
+export const API_URL = (import.meta.env.VITE_API_URL || DEFAULT_API).replace(/\/$/, "");
 
 export async function apiFetch(path, options = {}) {
   const user = auth.currentUser;

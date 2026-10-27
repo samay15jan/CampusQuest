@@ -14,7 +14,7 @@ COPY photos ./photos
 COPY evaluation ./evaluation
 COPY config ./config
 COPY data ./data
-COPY entrypoint.sh ./entrypoint.sh
+COPY config/entrypoint.sh ./entrypoint.sh
 RUN chmod 755 ./entrypoint.sh && mkdir -p /data
 
 EXPOSE 8000

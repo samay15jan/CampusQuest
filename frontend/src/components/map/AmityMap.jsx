@@ -95,7 +95,18 @@ function smoothHeading(current, target) {
  *  - onSelectLocation(loc): called when a location marker is tapped (replaces the popup)
  *  - solvedIds: location ids whose riddle is solved; their markers turn red
  */
-export default function AmityMap({ portals = [], onSelectPortal, onSelectLocation, solvedIds = [], showControls = true }) {
+export default function AmityMap({
+  portals = [],
+  onSelectPortal,
+  onSelectLocation,
+  solvedIds = [],
+  showControls = true,
+  // Desktop dashboard options (all default to the original mobile behaviour):
+  fill = false,            // fill the parent instead of the full viewport height
+  showLocations = true,    // grey campus landmark markers
+  trackUser = true,        // request the device location / draw the "you are here" dot
+  onMapReady,              // (map) => void, called once the fly-in has settled
+}) {
   const container = useRef(null);
 
   const mapRef = useRef(null);
@@ -105,6 +116,8 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
   onSelectRef.current = onSelectLocation;
   const onSelectPortalRef = useRef(onSelectPortal);
   onSelectPortalRef.current = onSelectPortal;
+  const onMapReadyRef = useRef(onMapReady);
+  onMapReadyRef.current = onMapReady;
   const markerEls = useRef(new Map());
   const portalMarkersRef = useRef(new Map());
   const portalLinksSvgRef = useRef(null);
@@ -121,9 +134,9 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
   const [mapReady, setMapReady] = useState(false);
 
   // Live user location (only drawn while the user is inside the campus area).
-  const { position } = useUserLocation();
+  const { position } = useUserLocation({ enabled: trackUser });
   const userMarkerRef = useRef(null);
-  const userInside = !!position && isInsideCampus([position.lng, position.lat]);
+  const userInside = trackUser && !!position && isInsideCampus([position.lng, position.lat]);
 
   const isMobileDevice = () => {
     if (typeof window === "undefined") return false;
@@ -316,6 +329,7 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
           // Do not render the portal network until the initial camera animation
           // has completely settled.
           setMapReady(true);
+          onMapReadyRef.current?.(map);
         });
 
         map.flyTo({
@@ -404,7 +418,7 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
 
     /* ------------------------ Location markers ----------------------- */
 
-    LOCATIONS.forEach((loc) => {
+    (showLocations ? LOCATIONS : []).forEach((loc) => {
       const el = document.createElement("div");
       el.className =
         "campus-marker pointer-events-none flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-gray-300 bg-gray-500 text-white opacity-0 shadow-md transition-opacity duration-500";
@@ -756,7 +770,7 @@ export default function AmityMap({ portals = [], onSelectPortal, onSelectLocatio
   };
 
   return (
-    <div className="relative h-screen w-full">
+    <div className={`relative w-full ${fill ? "h-full" : "h-screen"}`}>
       {/* MAP */}
       <div ref={container} className="h-full w-full" />
 
