@@ -15,6 +15,11 @@ test('normalizeName ignores case, punctuation, spaces and a leading "The"', () =
   assert.notEqual(normalizeName('Library'), normalizeName('H Block Centre'));
 });
 
+test('every ML photo folder maps to its portal (Gate 2A = Gate No. 2)', () => {
+  assert.equal(normalizeName('Gate 2A'), normalizeName('Gate No. 2'));
+  assert.notEqual(normalizeName('Gate 2A'), normalizeName('J2 Block Entrance'));
+});
+
 test('sends raw bytes with bearer token to /v1/predict', async () => {
   let seen;
   stub(async (url, init) => { seen = { url: String(url), init }; return reply({ predictions: [{ label: 'Library', similarity: 0.6 }] })(); });

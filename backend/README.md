@@ -11,7 +11,7 @@ Fastify + PostgreSQL + Firebase Auth API for CampusQuest, a mobile-first campus 
 | Playable hours | Mon-Fri 09:00-17:00 (`CAMPUS_TZ`). Every game action is refused outside this. |
 | Portals | 14-15 in the master list; **10 random** are used per event. Open in **two windows a day** (`PORTAL_WINDOWS`). |
 | Riddles | **2 per player per day**, not tied to a location. Answer = a portal name (multiple choice, 4 options). Correct = **1 resonator** + XP. |
-| Deploy | Needs a free resonator **and** a passed verification (GPS within the portal radius, default 20 m, **and** live-photo similarity ≥ 70 %). |
+| Deploy | Needs a free resonator **and** a passed verification (GPS within the portal radius, default 20 m, **and** live-photo similarity ≥ `IMAGE_MATCH_THRESHOLD` (default 50 %)). |
 | Limits | 1 active resonator per player per portal; **1 deployment per player per portal per day**. |
 | Capture | 3 active resonators of one faction = **controlled**, and **locked until 17:00 that day** (immune to attacks). |
 | Attack | Be at the portal. Destroys 1 enemy resonator on a partial / unlocked portal (60 s cooldown). Then anyone can replace it. |
@@ -27,7 +27,7 @@ cp .env.example .env          # fill in the FIREBASE_* values, ADMIN_API_KEY
 docker compose up --build
 ```
 
-The API container runs `migrate → seed → nodemon`. API on `http://localhost:3000`, Postgres on `5432`.
+The API container runs `migrate → seed → nodemon`. API on `http://localhost:3000` (compose publishes 3000:3000), Postgres on `5432`.
 First run only: create this week's event (the scheduler also does it automatically when none exists):
 
 ```bash
@@ -119,6 +119,10 @@ POST {IMAGE_MATCHER_URL}/v1/predict      Authorization: Bearer <token>   Content
 → 200 { "predictedTerritory", "accepted", "similarity", "margin",
         "predictions": [ { "label": "Library", "similarity": 0.62 }, ... ] }
 ```
+`GET /health` also reports the matcher (`"matcher": {"mode":"http","ready":true}`); if `ready` is false it says why. Failures of the ML call are logged as `[matcher] ...` in the API logs (wrong token, tunnel down, timeout, photo too big).
+
+**Palm Court has no ML photos**, so it can never pass verification. Either add a `Palm Court` folder to `ML/photos` and rebuild the gallery, or deactivate it: `PATCH /admin/portals/:id {"active": false}`. The ML folder `Gate 2A` is matched to the portal `Gate No. 2` by an alias in `src/matcher/index.js`.
+
 **Pass rule:** the highest-similarity label must be the portal being captured (names are compared ignoring case, punctuation and a leading "The", so `Raras Foodtruck` = `Rara's Food Truck`) **and** its similarity must be >= `IMAGE_MATCH_THRESHOLD` (default 0.50, shown in the UI as "≥ 50%"). The ML service's own `accepted` flag is ignored. If the best guess is a different place, the reported similarity is that of this portal's label (0 when it is outside the top 3), so the result screen stays consistent.
 No reference images are needed for this mode. Anti-fraud: the app should use live camera only (as in the design). The server does not store submitted photos.
 

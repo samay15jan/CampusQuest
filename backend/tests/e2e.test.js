@@ -10,6 +10,7 @@ Object.assign(process.env, { DEV_AUTH_BYPASS: 'true', DEV_IGNORE_HOURS: 'true', 
 if (!/_test$/.test(process.env.DB_NAME ?? '')) throw new Error('Refusing to run: DB_NAME must end with _test');
 
 const { buildApp } = await import('../src/app.js');
+const { gameConfig } = await import('../src/config/game.js');
 const { pool, query } = await import('../src/db/db.js');
 const { tick } = await import('../src/services/eventService.js');
 
@@ -88,7 +89,7 @@ test('riddles: 2 per day, wrong answer rejected, correct grants a resonator + XP
   const ok = await solveOne('r1');
   assert.equal(ok.body.correct, true);
   assert.equal(ok.body.available_resonators, 1);
-  assert.equal(ok.body.xp.awarded, 100);
+  assert.equal(ok.body.xp.awarded, gameConfig.XP.RIDDLE_SOLVED);
   const again = (await call('GET', '/riddles/today', { user: 'r1' })).body;
   assert.equal(again.riddles.filter((r) => r.solved).length, 1);
   assert.equal((await call('POST', '/riddles/999999/answer', { user: 'r1', body: { answer: 'x' } })).status, 404);
