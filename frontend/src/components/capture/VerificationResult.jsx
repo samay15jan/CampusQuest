@@ -7,7 +7,9 @@ import { ALLOWED_RANGE, MIN_SIMILARITY } from "./verify.js";
 function failReason(r) {
   if (r.locationError) return "We couldn't read your location. Enable location access and try again.";
   if (!r.locationOk) return `You're ${r.distance} m away. Get within ${ALLOWED_RANGE} m of the portal.`;
-  return `Photo similarity was ${r.similarity}% (needs ≥ ${MIN_SIMILARITY}%). Retake it with the full structure in frame.`;
+  const need = r.requiredPct ?? MIN_SIMILARITY;
+  if (r.bestGuess && r.topIsThis === false) return `The photo looks more like "${r.bestGuess}" than this portal (it scored ${r.similarity}% for this one). Retake it with the full structure in frame.`;
+  return `Photo similarity was ${r.similarity}% (needs ≥ ${need}%). Retake it with the full structure in frame.`;
 }
 
 const Dot = ({ ok, accent }) => (
@@ -34,7 +36,7 @@ export default function VerificationResult({ portal, photo, result, accent, onBa
 
   const checks = [
     ["pin", "Location Match", `Within ${ALLOWED_RANGE} meters`, locationOk],
-    ["image", "Visual Similarity", `${similarity}% (≥ ${MIN_SIMILARITY}%)`, imageOk],
+    ["image", "Visual Similarity", `${similarity}% (≥ ${result.requiredPct ?? MIN_SIMILARITY}%)`, imageOk],
     ["camera", "Portal Status", ok ? "Ready for resonator" : "Not verified", ok],
   ];
 

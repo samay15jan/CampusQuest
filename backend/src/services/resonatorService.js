@@ -60,10 +60,14 @@ export async function verifyPortal(uid, portalId, { photo, photoType, latitude, 
 
   let similarity = null;
   let imageOk = false;
+  let bestGuess = null, topIsThis = null;
   if (locationOk) {                                     // skip the (expensive) matcher when too far away
     const m = await compareImages({ photo, contentType: photoType, portal });
     similarity = m.similarity;
     imageOk = m.matches && similarity >= gameConfig.IMAGE_MATCH_THRESHOLD;   // best guess must be THIS portal, at >= threshold
+    bestGuess = m.label;
+    topIsThis = m.matches;
+    console.log(`[verify] portal="${portal.name}" best_guess="${m.label}" is_this_portal=${m.matches} similarity=${similarity.toFixed(3)} threshold=${gameConfig.IMAGE_MATCH_THRESHOLD} -> ${imageOk ? 'PASS' : 'FAIL'}`);
   }
   const passed = locationOk && imageOk;
 
@@ -77,7 +81,7 @@ export async function verifyPortal(uid, portalId, { photo, photoType, latitude, 
     verification_id: passed ? rows[0].id : null,
     expires_in_seconds: passed ? gameConfig.VERIFICATION_TTL_SECONDS : null,
     location: { ok: locationOk, distance_m: Math.round(distance), allowed_range_m: range },
-    image: { ok: imageOk, similarity: similarity === null ? null : Math.round(similarity * 100), required_pct: Math.round(gameConfig.IMAGE_MATCH_THRESHOLD * 100) },
+    image: { ok: imageOk, similarity: similarity === null ? null : Math.round(similarity * 100), required_pct: Math.round(gameConfig.IMAGE_MATCH_THRESHOLD * 100), ...(env.isProd ? {} : { best_guess: bestGuess, top_is_this_portal: topIsThis }) },
     message: passed ? 'Portal verified' : !locationOk ? `Too far from the portal (${Math.round(distance)} m)` : 'The photo does not match this portal. Try again',
   };
 }
