@@ -106,7 +106,8 @@ test('capture flow: too far fails, 3 players capture + lock, enemy cannot attack
   for (const u of ['r1', 'r2', 'r3']) {
     const v = await verify(u, A, A.latitude, A.longitude);
     assert.equal(v.body.passed, true, JSON.stringify(v.body));
-    assert.equal(v.body.image.similarity, 72);
+    assert.equal(v.body.image.ok, true);
+    assert.equal('similarity' in v.body.image, false);   // no percentage any more
     const d = await call('POST', `/portals/${A.id}/deploy`, { user: u, body: { verification_id: v.body.verification_id } });
     assert.equal(d.status, 201, JSON.stringify(d.body));
     if (u === 'r3') { assert.equal(d.body.captured, true); assert.equal(d.body.xp.awarded, 150); }

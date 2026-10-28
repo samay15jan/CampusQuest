@@ -15,7 +15,6 @@ export const gameConfig = {
   RIDDLES_PER_DAY: 2,           // each correct riddle = 1 resonator
   MAX_WRONG_ANSWERS_PER_MINUTE: 5,
 
-  IMAGE_MATCH_THRESHOLD: env.IMAGE_MATCH_THRESHOLD, // 0..1
   VERIFICATION_TTL_SECONDS: 300,   // a passed verification can be used to deploy for 5 minutes
   MAX_VERIFICATIONS_PER_MINUTE: 10,
   ATTACK_COOLDOWN_SECONDS: 60,

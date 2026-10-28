@@ -2,14 +2,13 @@ import Icon from "../ui/Icon.jsx";
 import ScreenHeader from "../ui/ScreenHeader.jsx";
 import PrimaryButton, { BottomAction } from "../ui/PrimaryButton.jsx";
 import { GREEN } from "../../theme.js";
-import { ALLOWED_RANGE, MIN_SIMILARITY } from "./verify.js";
+import { ALLOWED_RANGE } from "./verify.js";
 
 function failReason(r) {
   if (r.locationError) return "We couldn't read your location. Enable location access and try again.";
   if (!r.locationOk) return `You're ${r.distance} m away. Get within ${ALLOWED_RANGE} m of the portal.`;
-  const need = r.requiredPct ?? MIN_SIMILARITY;
-  if (r.bestGuess && r.topIsThis === false) return `The photo looks more like "${r.bestGuess}" than this portal (it scored ${r.similarity}% for this one). Retake it with the full structure in frame.`;
-  return `Photo similarity was ${r.similarity}% (needs ≥ ${need}%). Retake it with the full structure in frame.`;
+  if (r.bestGuess) return `The photo looks like "${r.bestGuess}", not this portal. Retake it with the full structure in frame.`;
+  return "We couldn't recognise this portal in the photo. Retake it with the full structure in frame.";
 }
 
 const Dot = ({ ok, accent }) => (
@@ -31,12 +30,12 @@ function Metric({ icon, title, value, ok, accent }) {
 }
 
 export default function VerificationResult({ portal, photo, result, accent, onBack, onDeploy, onRetake }) {
-  const { ok, locationOk, imageOk, distance, similarity } = result;
+  const { ok, locationOk, imageOk, distance, bestGuess } = result;
   const c = ok ? GREEN : accent;
 
   const checks = [
     ["pin", "Location Match", `Within ${ALLOWED_RANGE} meters`, locationOk],
-    ["image", "Visual Similarity", `${similarity}% (≥ ${result.requiredPct ?? MIN_SIMILARITY}%)`, imageOk],
+    ["image", "Photo Recognised", imageOk ? "Matches this portal" : bestGuess ? `Looks like ${bestGuess}` : "Portal not recognised", imageOk],
     ["camera", "Portal Status", ok ? "Ready for resonator" : "Not verified", ok],
   ];
 
@@ -54,7 +53,7 @@ export default function VerificationResult({ portal, photo, result, accent, onBa
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Metric icon="pin" title={locationOk ? "Location Confirmed" : "Location Mismatch"} value={distance != null ? `${distance} m away` : "Unavailable"} ok={locationOk} accent={accent} />
-          <Metric icon="image" title={imageOk ? "Visual Match" : "Visual Mismatch"} value={`${similarity}% similarity`} ok={imageOk} accent={accent} />
+          <Metric icon="image" title={imageOk ? "Visual Match" : "Visual Mismatch"} value={imageOk ? "Recognised" : bestGuess ? `Looks like ${bestGuess}` : "Not recognised"} ok={imageOk} accent={accent} />
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-2">

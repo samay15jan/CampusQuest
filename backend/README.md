@@ -11,7 +11,7 @@ Fastify + PostgreSQL + Firebase Auth API for CampusQuest, a mobile-first campus 
 | Playable hours | Mon-Fri 09:00-17:00 (`CAMPUS_TZ`). Every game action is refused outside this. |
 | Portals | 14-15 in the master list; **10 random** are used per event. Open in **two windows a day** (`PORTAL_WINDOWS`). |
 | Riddles | **2 per player per day**, not tied to a location. Answer = a portal name (multiple choice, 4 options). Correct = **1 resonator** + XP. |
-| Deploy | Needs a free resonator **and** a passed verification (GPS within the portal radius, default 20 m, **and** live-photo similarity ≥ `IMAGE_MATCH_THRESHOLD` (default 50 %)). |
+| Deploy | Needs a free resonator **and** a passed verification (GPS within the portal radius, default 20 m, **and** the live photo recognised as this portal). |
 | Limits | 1 active resonator per player per portal; **1 deployment per player per portal per day**. |
 | Capture | 3 active resonators of one faction = **controlled**, and **locked until 17:00 that day** (immune to attacks). |
 | Attack | Be at the portal. Destroys 1 enemy resonator on a partial / unlocked portal (60 s cooldown). Then anyone can replace it. |
@@ -105,7 +105,7 @@ All except `/health` and `/portals/:id/image` need `Authorization: Bearer <Fireb
 **Reference images:** only used to display the portal's photo in the app. Image verification does not need them.
 
 ## Image recognition
-`IMAGE_MATCHER=mock` always returns `MATCHER_MOCK_SIMILARITY` (0.72) for local dev and tests. For real verification set:
+`IMAGE_MATCHER=mock` always says the photo shows the portal being captured (local dev and tests). For real verification set:
 
 ```
 IMAGE_MATCHER=http
@@ -123,7 +123,7 @@ POST {IMAGE_MATCHER_URL}/v1/predict      Authorization: Bearer <token>   Content
 
 **Palm Court has no ML photos**, so it can never pass verification. Either add a `Palm Court` folder to `ML/photos` and rebuild the gallery, or deactivate it: `PATCH /admin/portals/:id {"active": false}`. The ML folder `Gate 2A` is matched to the portal `Gate No. 2` by an alias in `src/matcher/index.js`.
 
-**Pass rule:** the highest-similarity label must be the portal being captured (names are compared ignoring case, punctuation and a leading "The", so `Raras Foodtruck` = `Rara's Food Truck`) **and** its similarity must be >= `IMAGE_MATCH_THRESHOLD` (default 0.50, shown in the UI as "≥ 50%"). The ML service's own `accepted` flag is ignored. If the best guess is a different place, the reported similarity is that of this portal's label (0 when it is outside the top 3), so the result screen stays consistent.
+**Pass rule (no percentage threshold):** the player must be within range of the portal, and the model's highest-ranked guess among the portals that are *within range of the player's GPS position* must be the portal being captured. Guesses for portals that are not nearby are skipped; a guess that is not a known portal (e.g. `_other`) counts as a miss. Names are compared ignoring case, punctuation and a leading "The", so `Raras Foodtruck` = `Rara's Food Truck`. The ML service's own `accepted` flag is ignored. `POST /portals/:id/verify` answers `image: { ok, best_guess }`, where `best_guess` is the nearby portal the photo looked like (null if none recognised). Set `PREDICTIONS_TOP_K` on the ML service (default 20 in its compose file) so the ranking includes enough labels for the nearby filter to work.
 No reference images are needed for this mode. Anti-fraud: the app should use live camera only (as in the design). The server does not store submitted photos.
 
 ## Event lifecycle

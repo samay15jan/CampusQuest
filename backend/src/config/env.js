@@ -36,7 +36,6 @@ export const env = {
   IMAGE_MATCHER_URL: str(process.env.IMAGE_MATCHER_URL),       // base URL of the ML service (we call /v1/predict)
   IMAGE_MATCHER_TOKEN: str(process.env.IMAGE_MATCHER_TOKEN),   // its INFERENCE_API_TOKEN (server-side only)
   MATCHER_MOCK_SIMILARITY: num(process.env.MATCHER_MOCK_SIMILARITY, 0.72),
-  IMAGE_MATCH_THRESHOLD: num(process.env.IMAGE_MATCH_THRESHOLD, 0.5),
   DEPLOY_RANGE_M: num(process.env.DEPLOY_RANGE_M),
   ATTACK_RANGE_M: num(process.env.ATTACK_RANGE_M),
 

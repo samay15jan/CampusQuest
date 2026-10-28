@@ -18,6 +18,7 @@ import { getCurrentEvent } from "../../api/event.js";
 import { getPortal, getPortals } from "../../api/portals.js";
 import { getActivity, getHeatmap } from "../../api/intel.js";
 import { getTodayRiddles } from "../../api/riddles.js";
+import { getResonators } from "../../api/account.js";
 import { withAnswered } from "../riddle/answeredStore.js";
 import useUserLocation from "../map/useUserLocation.js";
 import { ALLOWED_RANGE, haversine, portalCoordinates } from "../capture/verify.js";
@@ -104,6 +105,16 @@ export default function DashboardScreen() {
       .catch(() => { });
     return () => { active = false; };
   }, [riddlesOpen, capturing]);
+
+  // Always read the live resonator count when the capture flow opens (earned from riddles minus deployed).
+  useEffect(() => {
+    if (!capturing) return;
+    let active = true;
+    getResonators()
+      .then((data) => { if (active) setResonators(data?.available ?? 0); })
+      .catch(() => { });
+    return () => { active = false; };
+  }, [capturing]);
 
   // Nearest portal, and whether the player is within range of it.
   const nearest = position
@@ -254,6 +265,7 @@ export default function DashboardScreen() {
         {capturing && <CaptureFlow
           portal={capturing}
           accent={accent}
+          availableResonators={resonators}
           onClose={() => setCapturing(null)}
           onComplete={(res) => {
             console.log("Captured", res);

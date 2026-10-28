@@ -8,7 +8,7 @@ import {
   getPlayer, requireOnboarded, requireLiveEvent, requirePortalOpen, getEventPortal,
   distanceTo, rangeFor, today, awardXp, logEvent, getCurrentEvent,
 } from '../lib/context.js';
-import { compareImages } from '../matcher/index.js';
+import { compareImages, decideMatch } from '../matcher/index.js';
 import { getActiveResonators, recalculatePortal, stateView } from './portalState.js';
 
 /** Derived, never stored: resonators earned this event (correct riddles) minus resonators deployed this event. */
@@ -39,7 +39,8 @@ export async function getMyResonators(uid) {
 
 /**
  * POST /portals/:id/verify  (multipart: photo + latitude + longitude)
- * Checks distance and sends the live photo to the image-recognition service (best label must be this portal at >= IMAGE_MATCH_THRESHOLD).
+ * Checks distance and sends the live photo to the image-recognition service. The photo passes when the model's best guess among the portals
+ * within range of the player is this portal (no percentage threshold).
  * Always answers 200 with details so the UI can show the result screen; a passed result
  * carries a single-use verification_id that POST /portals/:id/deploy consumes.
  */
@@ -58,31 +59,35 @@ export async function verifyPortal(uid, portalId, { photo, photoType, latitude, 
   const range = rangeFor(portal, 'deploy');
   const locationOk = distance <= range;
 
-  let similarity = null;
+  let score = null;                                     // the model's raw score for the deciding guess, kept only for tuning
   let imageOk = false;
-  let bestGuess = null, topIsThis = null;
+  let bestGuess = null;                                 // name of the portal the photo looks like (null = not recognised)
   if (locationOk) {                                     // skip the (expensive) matcher when too far away
-    const m = await compareImages({ photo, contentType: photoType, portal });
-    similarity = m.similarity;
-    imageOk = m.matches && similarity >= gameConfig.IMAGE_MATCH_THRESHOLD;   // best guess must be THIS portal, at >= threshold
-    bestGuess = m.label;
-    topIsThis = m.matches;
-    console.log(`[verify] portal="${portal.name}" best_guess="${m.label}" is_this_portal=${m.matches} similarity=${similarity.toFixed(3)} threshold=${gameConfig.IMAGE_MATCH_THRESHOLD} -> ${imageOk ? 'PASS' : 'FAIL'}`);
+    const { predictions } = await compareImages({ photo, contentType: photoType, portal });
+    const known = await queryMany('SELECT id, name, latitude, longitude, radius_m FROM portals');
+    const verdict = decideMatch(predictions, portal, known, (p) => distanceTo(p, latitude, longitude) <= rangeFor(p, 'deploy'));
+    imageOk = verdict.matches;
+    bestGuess = verdict.portal?.name ?? null;
+    score = verdict.score;
+    console.log(`[verify] portal="${portal.name}" best_nearby_guess="${verdict.label}" score=${score === null ? 'n/a' : score.toFixed(3)} -> ${imageOk ? 'PASS' : 'FAIL'}`);
   }
   const passed = locationOk && imageOk;
 
   const { rows } = await query(
     `INSERT INTO deploy_verifications (user_id, event_id, portal_id, latitude, longitude, distance_m, location_ok, similarity, image_ok, passed)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-    [player.id, ev.id, portal.id, latitude, longitude, distance, locationOk, similarity, imageOk, passed]
+    [player.id, ev.id, portal.id, latitude, longitude, distance, locationOk, score, imageOk, passed]
   );
   return {
     passed,
     verification_id: passed ? rows[0].id : null,
     expires_in_seconds: passed ? gameConfig.VERIFICATION_TTL_SECONDS : null,
     location: { ok: locationOk, distance_m: Math.round(distance), allowed_range_m: range },
-    image: { ok: imageOk, similarity: similarity === null ? null : Math.round(similarity * 100), required_pct: Math.round(gameConfig.IMAGE_MATCH_THRESHOLD * 100), ...(env.isProd ? {} : { best_guess: bestGuess, top_is_this_portal: topIsThis }) },
-    message: passed ? 'Portal verified' : !locationOk ? `Too far from the portal (${Math.round(distance)} m)` : 'The photo does not match this portal. Try again',
+    image: { ok: imageOk, best_guess: bestGuess },
+    message: passed ? 'Portal verified'
+      : !locationOk ? `Too far from the portal (${Math.round(distance)} m)`
+      : bestGuess ? `This photo looks like ${bestGuess}, not this portal. Try again`
+      : 'We could not recognise this portal in the photo. Try again',
   };
 }
 

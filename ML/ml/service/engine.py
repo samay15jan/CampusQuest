@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import threading
 from typing import Any
 
@@ -43,5 +44,5 @@ class RecognitionEngine:
                 image_bytes,
                 min_similarity=self.min_similarity,
                 min_margin=self.min_margin,
-                top_k=3,
+                top_k=int(os.getenv("PREDICTIONS_TOP_K", "3")),   # how many ranked labels to return
             )

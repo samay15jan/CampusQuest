@@ -1,11 +1,9 @@
 // Image-recognition adapter.
-//   compareImages({ photo: Buffer, contentType, portal }) -> { similarity: 0..1, label, matches }
+//   compareImages({ photo: Buffer, contentType, portal }) -> { predictions: [{ label, score }] }   best first
+//   decideMatch(predictions, target, portals, isNearby)   -> { matches, portal, label, score }
 //
-//   similarity  confidence the photo shows THIS portal (0 if the portal is not among the model's top guesses)
-//   label       the model's best guess (highest similarity) for the photo
-//   matches     true when that best guess is this portal
-//
-// The decision (matches && similarity >= IMAGE_MATCH_THRESHOLD) is made in resonatorService.
+// There is no percentage threshold. A photo is accepted when, among the portals that can actually be at the
+// player's location, the model's highest-ranked guess is the portal being captured.
 import { env } from '../config/env.js';
 import { httpError } from '../lib/errors.js';
 
@@ -27,15 +25,15 @@ export const normalizeName = (s) => {
 const logMatcher = (msg, extra = {}) => console.error(`[matcher] ${msg}`, extra);
 
 async function mockCompare({ portal }) {
-  return { similarity: env.MATCHER_MOCK_SIMILARITY, label: portal?.name ?? null, matches: true };
+  return { predictions: [{ label: portal?.name ?? '', score: env.MATCHER_MOCK_SIMILARITY }] };
 }
 
 // HTTP contract (ML/README.md):
 //   POST {IMAGE_MATCHER_URL}/v1/predict   Authorization: Bearer <token>   Content-Type: image/*   body = raw image bytes
 //   -> 200 { predictedTerritory, accepted, similarity, margin, predictions: [{ label, similarity }] }
 // The service's own `accepted` / `predictedTerritory` verdict is ignored on purpose: the game decides
-// from the highest-similarity prediction and IMAGE_MATCH_THRESHOLD.
-async function httpCompare({ photo, contentType = 'image/jpeg', portal }) {
+// from the ranked predictions (see decideMatch) and where the player actually is.
+async function httpCompare({ photo, contentType = 'image/jpeg' }) {
   if (!env.IMAGE_MATCHER_URL || !env.IMAGE_MATCHER_TOKEN) {
     logMatcher('IMAGE_MATCHER=http but IMAGE_MATCHER_URL or IMAGE_MATCHER_TOKEN is empty');
     throw httpError(503, 'Image matcher is not configured');
@@ -64,20 +62,31 @@ async function httpCompare({ photo, contentType = 'image/jpeg', portal }) {
   try { body = await res.json(); } catch { logMatcher('response was not JSON'); throw httpError(503, 'Image matcher returned an invalid response'); }
 
   const predictions = (Array.isArray(body?.predictions) ? body.predictions : [])
-    .map((p) => ({ label: String(p?.label ?? ''), similarity: Number(p?.similarity) }))
-    .filter((p) => p.label && Number.isFinite(p.similarity))
-    .sort((a, b) => b.similarity - a.similarity);              // don't trust the service's ordering
+    .map((p) => ({ label: String(p?.label ?? ''), score: Number(p?.similarity) }))
+    .filter((p) => p.label && Number.isFinite(p.score))
+    .sort((x, y) => y.score - x.score);                        // don't trust the service's ordering
   if (!predictions.length) { logMatcher('response had no predictions'); throw httpError(503, 'Image matcher returned no predictions'); }
+  return { predictions };
+}
 
-  const clamp = (n) => Math.min(1, Math.max(0, n));
-  const top = predictions[0];
-  const wanted = normalizeName(portal.name);
-  const own = predictions.find((p) => normalizeName(p.label) === wanted);
-  return {
-    similarity: own ? clamp(own.similarity) : 0,
-    label: top.label,
-    matches: normalizeName(top.label) === wanted,
-  };
+/**
+ * Pick the model's best guess among the portals that could be here.
+ *  predictions  ranked best-first: [{ label, score }]
+ *  target       the portal being captured
+ *  portals      every portal we know ({ id, name, ... }), used to turn ML labels into portals
+ *  isNearby     (portal) => true when the player is within range of that portal
+ * Guesses for a known portal that is NOT nearby are skipped (it cannot be what the player is looking at).
+ * The first remaining guess decides: it passes only if it is the target. A guess that is not a known portal
+ * (e.g. "_other", or a label with no portal) counts as a miss rather than being skipped.
+ */
+export function decideMatch(predictions, target, portals, isNearby) {
+  const byName = new Map(portals.map((p) => [normalizeName(p.name), p]));
+  for (const p of predictions) {
+    const portal = byName.get(normalizeName(p.label)) ?? null;
+    if (portal && portal.id !== target.id && !isNearby(portal)) continue;
+    return { matches: portal?.id === target.id, portal, label: p.label, score: p.score };
+  }
+  return { matches: false, portal: null, label: null, score: null };
 }
 
 // Readiness probe for GET /health (cached so it can't be used to hammer the ML box).
