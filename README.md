@@ -35,6 +35,77 @@ CampusQuest turns a campus map into a live strategy game. Players join one of tw
 - [Security and operational notes](#security-and-operational-notes)
 - [Current limitations](#current-limitations)
 
+## Screenshots and user journey
+
+The screenshots below show the main CampusQuest experience, from joining the game to exploring portals and validating a capture. The gallery uses repository-relative image paths so the images stay versioned alongside the documentation.
+
+### 1. Sign-in and onboarding
+
+Players enter through the CampusQuest welcome screen and authenticate with Google using Firebase Authentication. After sign-in, they join a faction and enter the live game.
+
+<p align="center">
+  <img src="docs/screenshots/01-sign-in.jpg" width="32%" alt="CampusQuest sign-in and onboarding screen" />
+</p>
+
+### 2. Live GIS map
+
+The mobile map presents the campus as a playable space, with portal markers, resonator counts, faction ownership, event timing, and quick navigation. The desktop view gives a wider operational overview of campus territory and live game state.
+
+<p align="center">
+  <img src="docs/screenshots/02-mobile-map.jpg" width="32%" alt="Mobile GIS map with campus portals" />
+  <img src="docs/screenshots/03-desktop-map.jpg" width="64%" alt="Desktop live map and territory overview" />
+</p>
+
+### 3. Portal details and capture
+
+Opening a portal shows its location, current faction, level, resonator slots, point value, and capture requirements. A player must be physically near the portal and submit a live photo before the backend can authorize deployment.
+
+<p align="center">
+  <img src="docs/screenshots/04-portal-details.jpg" width="32%" alt="Portal details and capture requirements" />
+</p>
+
+### 4. GPS and ML image verification
+
+The verification flow checks the device location against the portal's allowed radius and submits the captured image for visual matching. The result screen explains which checks passed or failed. A visual mismatch must block capture even when location verification succeeds; the backend remains authoritative.
+
+<p align="center">
+  <img src="docs/screenshots/05-verifying-portal.jpg" width="32%" alt="Portal location and image verification in progress" />
+  <img src="docs/screenshots/06-verification-result.jpg" width="32%" alt="Verification result showing location and visual checks" />
+</p>
+
+### 5. Riddles, missions, and territory objectives
+
+Daily riddles connect exploration to real campus landmarks. Missions summarize available portals, current control state, and the actions each faction can take. Correct answers reward resonators, which players deploy at portals to help their faction reach the three-resonator capture requirement.
+
+<p align="center">
+  <img src="docs/screenshots/07-daily-riddle.jpg" width="32%" alt="Daily riddle with multiple-choice portal answers" />
+  <img src="docs/screenshots/08-missions.jpg" width="64%" alt="Desktop missions and portal objectives" />
+</p>
+
+### 6. Player profile and leaderboard
+
+The profile shows faction identity, XP and level progression, portal activity, and rank. The leaderboard compares players globally or by faction, helping make the territory competition visible to the whole campus.
+
+<p align="center">
+  <img src="docs/screenshots/09-profile-leaderboard.jpg" width="32%" alt="Player profile and leaderboard" />
+  <img src="docs/screenshots/10-desktop-leaderboard.jpg" width="64%" alt="Desktop leaderboard with Red and Blue team rankings" />
+</p>
+
+### How a session moves forward
+
+1. **Sign in:** authenticate with Firebase and select Red or Blue.
+2. **Find a target:** explore the GIS map or open a mission to choose a portal.
+3. **Solve a riddle:** identify a campus location and earn a resonator.
+4. **Go to the real location:** use the portal details and map to navigate to the landmark.
+5. **Verify the capture attempt:** provide a live photo and device coordinates; the API checks location and asks the ML service to match the photo.
+6. **Deploy:** only a request that passes the required checks can place a resonator.
+7. **Coordinate:** the faction works toward three active resonators at the same portal to capture it, then defends or attacks according to the game rules.
+8. **Track progress:** XP, levels, portal states, and leaderboard positions reflect the resulting server-side game state.
+
+> **Screenshot assets:** Place the ten supplied screenshots in `docs/screenshots/` using the filenames shown above. GitHub README files support static image galleries, not a native interactive JavaScript carousel.
+
+---
+
 ## At a glance
 
 | Area | Implementation |
