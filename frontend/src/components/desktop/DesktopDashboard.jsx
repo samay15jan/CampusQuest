@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashMap from "./DashMap.jsx";
 import useDashboard from "./useDashboard.js";
 import useCountdownTo from "./useCountdownTo.js";
+import LeaderboardView from "./LeaderboardView.jsx";
+import MissionsView from "./MissionsView.jsx";
+import HowToPlayView from "./HowToPlayView.jsx";
 import { Logo, Wordmark, TeamScore, ScoreBar, LiveActivity, Legend, PortalCard, TeamBoard, QRPanel } from "./parts.jsx";
-import { BLUE, ownerColor as teamColor } from "../../theme.js";
+import { BLUE } from "../../theme.js";
 
 const APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, "");
 const TABS = [["map", "Live Map"], ["leaderboard", "Leaderboard"], ["missions", "Missions"], ["how", "How to Play"]];
@@ -48,37 +51,25 @@ function Header({ view, setView, data, error, receivedAt }) {
   );
 }
 
-function Overlay({ title, children }) {
+function Overlay({ title, subtitle, onClose, children }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div className="absolute inset-0 z-20 overflow-auto bg-ink/95 p-8 backdrop-blur">
-      <h2 className="mb-6 font-display text-2xl font-black italic text-white">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-const HOW = [
-  ["Solve a riddle", "Each riddle points to a campus place. A correct answer earns a resonator."],
-  ["Go there and deploy", "Be at the portal, take a live photo and place your resonator."],
-  ["Hold 3 of 3", "Three resonators from your team make the territory controlled, then locked."],
-  ["Attack and defend", "Enemy resonators can be destroyed on unlocked portals. Reclaim them."],
-];
-
-function Missions({ portals }) {
-  return (
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-      {portals.map((p) => (
-        <div key={p.id} className="flex items-center gap-3 rounded-xl border bg-panel p-3" style={{ borderColor: `${teamColor(p.owner)}66` }}>
-          {p.img ? <img src={p.img} alt="" className="h-14 w-14 rounded-lg object-cover" /> : <span className="h-14 w-14 rounded-lg bg-white/10" />}
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-white">{p.name}</p>
-            <p className="text-sm text-mute">
-              <span style={{ color: teamColor(p.owner) }}>{p.owner === "neutral" ? "Neutral" : `${p.owner} controlled`}</span> · {p.resonators.total}/3
-              {p.locked ? " · locked" : ""}
-            </p>
-          </div>
+      <div className="mx-auto mb-6 flex max-w-[1280px] items-end justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-black italic text-white">{title}</h2>
+          {subtitle && <p className="mt-1 text-sm text-mute">{subtitle}</p>}
         </div>
-      ))}
+        <button type="button" onClick={onClose} className="shrink-0 rounded-lg border border-edge bg-panel px-4 py-2 font-display text-xs tracking-wide text-slate-200 hover:text-white">
+          ← Back to map <span className="ml-1 text-mute">Esc</span>
+        </button>
+      </div>
+      {children}
     </div>
   );
 }
@@ -123,21 +114,18 @@ export default function DesktopDashboard() {
           )}
 
           {view === "leaderboard" && (
-            <Overlay title="LEADERBOARD">
-              <div className="grid grid-cols-2 gap-4"><TeamBoard team="red" rows={lb.red} points={scores.red} limit={5} /><TeamBoard team="blue" rows={lb.blue} points={scores.blue} limit={5} /></div>
+            <Overlay title="LEADERBOARD" subtitle="Every ranked player, live. Points are XP earned this week." onClose={() => setView("map")}>
+              <LeaderboardView data={data} />
             </Overlay>
           )}
-          {view === "missions" && <Overlay title="MISSIONS · THIS WEEK'S PORTALS"><Missions portals={portals} /></Overlay>}
+          {view === "missions" && (
+            <Overlay title="MISSIONS · THIS WEEK'S PORTALS" subtitle="What each team can do at every portal right now." onClose={() => setView("map")}>
+              <MissionsView data={data} />
+            </Overlay>
+          )}
           {view === "how" && (
-            <Overlay title="HOW TO PLAY">
-              <ol className="grid max-w-3xl gap-4">
-                {HOW.map(([t, d], i) => (
-                  <li key={t} className="flex gap-4 rounded-xl border border-edge bg-panel p-4">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-red/60 font-display font-bold">{i + 1}</span>
-                    <span><b className="block text-lg">{t}</b><span className="text-mute">{d}</span></span>
-                  </li>
-                ))}
-              </ol>
+            <Overlay title="HOW TO PLAY" subtitle="Everything you need to know to join the battle." onClose={() => setView("map")}>
+              <HowToPlayView data={data} />
             </Overlay>
           )}
         </section>
